@@ -26,7 +26,8 @@ class TowerDefense:
         ## Set Monster spawns just for testing
         monster_img = pygame.image.load(join('assets', 'images', '0.png'))
         
-        monster = Monster(self.waypoints, monster_img, 2, self.all_sprites)
+        for monster in range(3):
+            monster = Monster(self.waypoints, monster_img, randint(1,3), self.all_sprites)
 
     def setup(self):
         map = load_pygame(join('assets', 'data', 'tmx', 'finals.tmx'))
@@ -42,7 +43,6 @@ class TowerDefense:
 
         ## Check x, y positions
         #print(self.waypoints)
-
 
     def run(self):
         while self.running:
