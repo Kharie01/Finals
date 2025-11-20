@@ -30,6 +30,6 @@ class Objects(pygame.sprite.Sprite):
         super().__init__(groups)
         self.rotation = rotation
         self.image = surface
-        self.image = pygame.transform.rotozoom(self.image, self.rotation * -1, 1)
+        #self.image = pygame.transform.rotozoom(self.image, self.rotation * -1, 1)
         self.image = pygame.transform.smoothscale(self.image, scale)
         self.rect = self.image.get_rect(topleft = pos)

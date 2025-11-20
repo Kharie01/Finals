@@ -35,9 +35,19 @@ class TowerDefense:
         for x, y, image in map.get_layer_by_name("Ground").tiles():
             Sprites((x * TILE_SIZE, y * TILE_SIZE), image, self.all_sprites)
 
-        for obj in map.get_layer_by_name("Objects"):
+        for obj in map.get_layer_by_name("castle"):
+            Objects((obj.x, obj.y), obj.image, (obj.width, obj.height), obj.rotation,self.all_sprites)
+
+        for obj in map.get_layer_by_name("House"):
             Objects((obj.x, obj.y), obj.image, (obj.width, obj.height), obj.rotation,self.all_sprites)
             #print(type(obj.rotation))
+        for obj in map.get_layer_by_name("decoration"):
+            Objects((obj.x, obj.y), obj.image, (obj.width, obj.height), obj.rotation,self.all_sprites)
+
+        for obj in map.get_layer_by_name("fences"):
+            Objects((obj.x, obj.y), obj.image, (obj.width, obj.height), obj.rotation,self.all_sprites)
+        
+        
         
         self.waypoints = [(waypoint.x, waypoint.y) for waypoint in map.get_layer_by_name("Waypoints")]
 
