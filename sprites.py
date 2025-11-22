@@ -17,8 +17,6 @@ class AllSprite(pygame.sprite.Group):
         for sprite in self:
             self.display.blit(sprite.image, sprite.rect.topleft)
 
-
-
 class Sprites(pygame.sprite.Sprite):
     def __init__(self, pos, surface, groups):
         super().__init__(groups)
