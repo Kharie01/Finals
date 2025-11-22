@@ -19,8 +19,10 @@ class UserInterface(pygame.sprite.Sprite):
 
         self.hover_sfx = pygame.mixer.Sound(join('assets', 'audio', 'sfx', 'mouse-hover.wav'))
         
-    def onMouseOver(self):
-        mouse_pos = pygame.mouse.get_pos()
+    def onMouseOver(self, mouse_pos=None):
+        # mouse_pos should be in game-surface coordinates. If not provided, use screen coords.
+        if mouse_pos is None:
+            mouse_pos = pygame.mouse.get_pos()
         if self.name != "startscreen":
             if self.rect.collidepoint(mouse_pos):
                 if not self.hovered:
@@ -28,9 +30,12 @@ class UserInterface(pygame.sprite.Sprite):
                     scale_factor = 1.1
                     new_size = (int(self.base_size[0] * scale_factor), int(self.base_size[1] * scale_factor))
                     self.image = pygame.transform.smoothscale(self.base_image, new_size)
-                    # keep the top-left position consistent
+                    # keep the position consistent (center for buttons)
                     self.rect = self.image.get_rect(center=self.pos)
-                    self.hover_sfx.play()
+                    try:
+                        self.hover_sfx.play()
+                    except Exception:
+                        pass
             else:
                 if self.hovered:
                     self.hovered = False

@@ -79,10 +79,19 @@ class TowerDefense:
         while self.running:
             dt = self.clock.tick(60) / 1000
 
+            window_w, window_h = self.screen.get_size()
+            scale_x = window_w / self.GAME_WIDTH if self.GAME_WIDTH != 0 else 1
+            scale_y = window_h / self.GAME_HEIGHT if self.GAME_HEIGHT != 0 else 1
+            scaled_w = window_w
+            scaled_h = window_h
+
+            offset_x = 0
+            offset_y = 0
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
-                
+
                 # Fullscreen toggle
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_F11:
@@ -96,31 +105,49 @@ class TowerDefense:
                 # WINDOW RESIZE
                 if event.type == pygame.VIDEORESIZE and not self.fullscreen:
                     self.screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
-                    # inform UI manager of the new window size
-                    try:
-                        self.ui_manager.set_window_resolution((event.w, event.h))
-                    except Exception:
-                        pass
 
-                for ui in self.ui_sprites:
-                    if event.type == pygame.MOUSEBUTTONDOWN:
-                        if ui.rect.collidepoint(event.pos) and self.show_start:
+                # Mouse clicks: convert screen coordinates to game-surface coordinates (stretch mapping)
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.show_start:
+                    mx, my = event.pos
+                    gx = (mx - offset_x) / scale_x
+                    gy = (my - offset_y) / scale_y
+                    for ui in list(self.ui_sprites):
+                        if ui.rect.collidepoint((gx, gy)):
                             if ui.name == "play":
                                 self.show_start = False
                                 self.ui_sprites.empty()
                                 self.setup()
-                                self.button_sfx.play()
+                                try:
+                                    self.button_sfx.play()
+                                except Exception:
+                                    pass
                             elif ui.name == "settings":
                                 print("Settings button clicked")
-                                self.button_sfx.play()
+                                try:
+                                    self.button_sfx.play()
+                                except Exception:
+                                    pass
                             elif ui.name == "exit":
                                 self.running = False
-                                self.button_sfx.play()
+                                try:
+                                    self.button_sfx.play()
+                                except Exception:
+                                    pass
+
+            # map current mouse position to game-surface coordinates for hover checks (stretch mapping)
+            mx, my = pygame.mouse.get_pos()
+            game_mouse = ( (mx - offset_x) / scale_x, (my - offset_y) / scale_y )
 
             # update
             self.all_sprites.update()
-            self.ui_sprites.update()
-            
+            # update UI sprites hover using mapped game_mouse
+            for ui in self.ui_sprites:
+                try:
+                    ui.onMouseOver(game_mouse)
+                except Exception:
+                    # fallback to default update
+                    ui.update()
+
             # draw
             self.all_sprites.set_target_surface(self.game_surface)
             self.all_sprites.draw()
@@ -129,25 +156,12 @@ class TowerDefense:
                 self.ui_sprites.set_target_surface(self.game_surface)
                 self.ui_sprites.draw()
 
-            window_w, window_h = self.screen.get_size()
-            scale = min(window_w / self.GAME_WIDTH, window_h / self.GAME_HEIGHT)
+            scaled_surface = pygame.transform.smoothscale(self.game_surface, (scaled_w, scaled_h))
 
-            scaled_w = window_w
-            scaled_h = window_h
-
-            scaled_surface = pygame.transform.smoothscale(
-                self.game_surface,
-                (scaled_w, scaled_h)
-            )
-
-            # Center the scaled game (letterboxing)
-            offset_x = 0
-            offset_y = 0
-
+            # draw onto the window centered (letterbox)
             self.screen.fill("black")
             self.screen.blit(scaled_surface, (offset_x, offset_y))
 
-            # Draw pygame_gui UI on top when start screen is active
             pygame.display.update()
 
         pygame.quit()
