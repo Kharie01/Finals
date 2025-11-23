@@ -23,15 +23,24 @@ class TowerDefense:
         self.running = True
         self.fullscreen = False
         self.show_start = False
+        self.show_map = False
 
         self.button_sfx = pygame.mixer.Sound(join('assets', 'audio', 'sfx', 'button-click.wav'))
+        self.start_bgmusic = pygame.mixer.Sound(join('assets', 'audio', 'bgm', 'start_bgm.wav'))
+        self.start_bgmusic.set_volume(0.5)
+        self.start_bgmusic.play(loops=-1)
 
-        # Load start screen and button images
+        # load images
         self.startscreen_images = {"start": pygame.image.load(join('assets', 'images', 'startscreen', 'Startscreen.png')).convert_alpha(),
                                     "play": pygame.image.load(join('assets', 'images', 'startscreen', 'play.png')).convert_alpha(),
                                     "setting": pygame.image.load(join('assets', 'images', 'startscreen', 'settings.png')).convert_alpha(),
                                     "exit": pygame.image.load(join('assets', 'images', 'startscreen', 'exit.png')).convert_alpha(),
                                 }
+        self.map_selection_images = {"map": pygame.image.load(join('assets', 'images', 'mapscreen', 'map.png')),
+                                    "back": pygame.image.load(join('assets', 'images', 'mapscreen', 'back.png')),
+                                    "upgrade": pygame.image.load(join('assets', 'images', 'mapscreen', 'upgrade.png'))
+                                    }
+        self.upgrades_images = {}
 
         self.start_screen()
 
@@ -40,12 +49,15 @@ class TowerDefense:
 
         # User interface elements
         self.start_screen_bg = UserInterface("startscreen", (0, 0), self.startscreen_images["start"], (self.GAME_WIDTH, self.GAME_HEIGHT), self.ui_sprites)
-        self.play_button = UserInterface("play", (self.GAME_WIDTH//2 + 350, self.GAME_HEIGHT//2 - 100), self.startscreen_images["play"], (150, 65), self.ui_sprites)
-        self.settings_button = UserInterface("settings", (self.GAME_WIDTH//2 + 350, self.GAME_HEIGHT//2), self.startscreen_images["setting"], (254, 68), self.ui_sprites)
-        self.exit_button = UserInterface("exit", (self.GAME_WIDTH//2 + 350, self.GAME_HEIGHT//2 + 100), self.startscreen_images["exit"], (139, 58), self.ui_sprites)
+        self.play_button = UserInterface("play", (self.GAME_WIDTH // 2 + 360, self.GAME_HEIGHT // 2 - 100), self.startscreen_images["play"], (150, 65), self.ui_sprites)
+        self.settings_button = UserInterface("settings", (self.GAME_WIDTH // 2 + 360, self.GAME_HEIGHT // 2), self.startscreen_images["setting"], (254, 68), self.ui_sprites)
+        self.exit_button = UserInterface("exit", (self.GAME_WIDTH // 2 + 360, self.GAME_HEIGHT // 2 + 100), self.startscreen_images["exit"], (139, 58), self.ui_sprites)
 
     def map_selection(self):
-        pass
+        self.show_map = True
+
+        self.map_button = UserInterface("map", (self.GAME_WIDTH // 2 + 360, self.GAME_HEIGHT // 2 - 100),)
+        self.map_bg = UserInterface("map", (), self.map_selection_images["map"], (self.GAME_WIDTH, self.GAME_HEIGHT), self.ui_sprites)
 
     def setup(self):
         map = load_pygame(join('assets', 'data', 'tmx', 'finals.tmx'))
@@ -117,6 +129,7 @@ class TowerDefense:
                                 self.show_start = False
                                 self.ui_sprites.empty()
                                 self.setup()
+                                self.start_bgmusic.stop()
                                 try:
                                     self.button_sfx.play()
                                 except Exception:
@@ -132,7 +145,7 @@ class TowerDefense:
                                 try:
                                     self.button_sfx.play()
                                 except Exception:
-                                    pass
+                                    pass 
 
             # map current mouse position to game-surface coordinates for hover checks (stretch mapping)
             mx, my = pygame.mouse.get_pos()
