@@ -17,13 +17,16 @@ class UserInterface(pygame.sprite.Sprite):
         self.base_size = self.base_image.get_size()
         self.hovered = False
 
-        self.hover_sfx = pygame.mixer.Sound(join('assets', 'audio', 'sfx', 'mouse-hover.wav'))
+        try:
+            self.hover_sfx = pygame.mixer.Sound(join('assets', 'audio', 'sfx', 'mouse-hover.wav'))
+        except Exception:
+            self.hover_sfx = None
         
     def onMouseOver(self, mouse_pos=None):
         # mouse_pos should be in game-surface coordinates. If not provided, use screen coords.
         if mouse_pos is None:
             mouse_pos = pygame.mouse.get_pos()
-        if self.name != "startscreen":
+        if self.name != "cloud" and self.name != "startscreen":
             if self.rect.collidepoint(mouse_pos):
                 if not self.hovered:
                     self.hovered = True
@@ -32,15 +35,23 @@ class UserInterface(pygame.sprite.Sprite):
                     self.image = pygame.transform.smoothscale(self.base_image, new_size)
                     # keep the position consistent (center for buttons)
                     self.rect = self.image.get_rect(center=self.pos)
-                    try:
-                        self.hover_sfx.play()
-                    except Exception:
-                        pass
+                    if self.hover_sfx:
+                        try:
+                            self.hover_sfx.play()
+                        except Exception:
+                            pass
             else:
                 if self.hovered:
                     self.hovered = False
                     self.image = self.base_image
                     self.rect = self.image.get_rect(center=self.pos)
 
-    def update(self):
+    def move(self, dt):
+        if self.name == "cloud":
+            self.rect.x += randint(75, 200) * dt
+            if self.rect.left > 1280:  # If cloud moves off screen, reset to left
+                self.rect.right = 0
+
+    def update(self, dt):
         self.onMouseOver()
+        self.move(dt)
