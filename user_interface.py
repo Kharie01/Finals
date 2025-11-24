@@ -64,29 +64,43 @@ class UserInterface(pygame.sprite.Sprite):
                 self.rect.right = 0
 
     def move_to(self):
-        # Animate to visible positions for specific UI elements
-        if self.name == "ui_bg":
-            # Move to center of the screen
+        if self.name == "logo":
+            self.target_pos = pygame.math.Vector2(self.game_width // 2 + 360, self.game_height // 2 - 250)
+        elif self.name == "ui_bg":
             self.target_pos = pygame.math.Vector2(self.game_width // 2, self.game_height // 2)
         elif self.name == "ui_back_btn":
             self.target_pos = pygame.math.Vector2(150, 100)
         elif self.name == "ui_play_btn":
             self.target_pos = pygame.math.Vector2(self.game_width // 2, self.game_height - 100)
+        elif self.name == "map":
+            self.target_pos = pygame.math.Vector2(self.game_width // 2 + 360, self.game_height // 2 - 100)
+        elif self.name == "upgrades":
+            self.target_pos = pygame.math.Vector2(self.game_width // 2 + 360, self.game_height // 2)
+        elif self.name == "back":
+            self.target_pos = pygame.math.Vector2(self.game_width // 2 + 360, self.game_height // 2 + 100)
         elif self.name == "map_1":
-            self.target_pos = pygame.math.Vector2(self.game_width // 2 - 200, 300)
+            self.target_pos = pygame.math.Vector2(self.game_width // 2 - 200, 325)
         else:
             self.target_pos = None
 
     def move_away(self):
         # Animate back to off-screen positions
-        if self.name == "ui_bg":
-            self.target_pos = pygame.math.Vector2(self.game_width // 2, -self.game_height // 2 -50)
+        if self.name == "logo":
+            self.target_pos = pygame.math.Vector2(self.game_width + 360, self.game_height // 2 - 250)
+        elif self.name == "ui_bg":
+            self.target_pos = pygame.math.Vector2(-self.game_width, self.game_height // 2)
         elif self.name == "ui_back_btn":
-            self.target_pos = pygame.math.Vector2(60, -self.game_height + 60)
+            self.target_pos = pygame.math.Vector2(-self.game_width + 60, 0 + 60)
         elif self.name == "ui_play_btn":
-            self.target_pos = pygame.math.Vector2(self.game_width // 2, -self.game_height - 200)
+            self.target_pos = pygame.math.Vector2(-self.game_width, self.game_height - 200)
+        elif self.name == "map":
+            self.target_pos = pygame.math.Vector2(self.game_width + 360, self.game_height // 2 - 100)
+        elif self.name == "upgrades":
+            self.target_pos = pygame.math.Vector2(self.game_width + 360, self.game_height // 2)
+        elif self.name == "back":
+            self.target_pos = pygame.math.Vector2(self.game_width + 360, self.game_height // 2 + 100)
         elif self.name == "map_1":
-            self.target_pos = pygame.math.Vector2(self.game_width // 2 - 150, -self.game_height + 150)
+            self.target_pos = pygame.math.Vector2(-self.game_width // 2 - 150, 0 + 150)
         else:
             self.target_pos = None
 
@@ -109,6 +123,10 @@ class UserInterface(pygame.sprite.Sprite):
         dimmed.blit(darken, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
         return dimmed
 
+    def set_opacity(self, alpha):
+        """Set the opacity of the image (0-255, where 255 is fully opaque)"""
+        self.base_image.set_alpha(alpha)
+        self.image = self.base_image
 
     def update(self, dt):
         self.onMouseOver()

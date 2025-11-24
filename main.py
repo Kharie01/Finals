@@ -15,6 +15,7 @@ class TowerDefense:
 
         self.screen = pygame.display.set_mode((self.GAME_WIDTH, self.GAME_HEIGHT), pygame.RESIZABLE)
         pygame.display.set_caption("Fortress Frontline")
+        pygame.display.set_icon(pygame.image.load(join('assets', 'images', 'icon', 'gameicon.ico')).convert_alpha())
 
         self.all_sprites = AllSprite(self.GAME_WIDTH, self.GAME_HEIGHT)
         self.ui_sprites = AllSprite(self.GAME_WIDTH, self.GAME_HEIGHT)
@@ -69,10 +70,11 @@ class TowerDefense:
         self.upgrades_button = UserInterface("upgrades", (self.GAME_WIDTH // 2 + 360, self.GAME_HEIGHT // 2), self.map_selection_images["upgrade"], (265, 68), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT)
         self.back_button = UserInterface("back", (self.GAME_WIDTH // 2 + 360, self.GAME_HEIGHT // 2 + 100), self.map_selection_images["back"], (139, 58), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT)
 
-        self.map_ui_surface = UserInterface("ui_bg", (self.GAME_WIDTH // 2, -self.GAME_HEIGHT), pygame.image.load(join('assets', 'images', 'grybg.png')).convert_alpha(), (self.GAME_WIDTH, self.GAME_HEIGHT), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT)
-        self.map_ui_back_btn = UserInterface("ui_back_btn", (60, -self.GAME_HEIGHT + 60), self.map_selection_images["back"], (139, 58), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT)
-        self.map_ui_play_btn = UserInterface("ui_play_btn", (self.GAME_WIDTH // 2, -self.GAME_HEIGHT - 200), self.startscreen_images["play"], (150, 65), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT)
-        self.map_ui_map_1 = UserInterface("map_1", (self.GAME_WIDTH // 2 - 150, -self.GAME_HEIGHT + 150), self.map_images["map1"], (150, 150), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT)
+        self.map_ui_surface = UserInterface("ui_bg", (-self.GAME_WIDTH, self.GAME_HEIGHT // 2), pygame.image.load(join('assets', 'images', 'grybg.png')).convert_alpha(), (self.GAME_WIDTH, self.GAME_HEIGHT), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT)
+        self.map_ui_surface.set_opacity(200)  # Slightly transparent (0-255, 255 is fully opaque)
+        self.map_ui_back_btn = UserInterface("ui_back_btn", (-self.GAME_WIDTH + 60, 0 + 60), self.map_selection_images["back"], (139, 58), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT)
+        self.map_ui_play_btn = UserInterface("ui_play_btn", (-self.GAME_WIDTH, self.GAME_HEIGHT - 200), self.startscreen_images["play"], (150, 65), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT)
+        self.map_ui_map_1 = UserInterface("map_1", (-self.GAME_WIDTH // 2 - 150, 0 + 150), self.map_images["map1"], (250, 250), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT)
 
         self.map_ui_play_btn.set_dimmed(True)
 
@@ -158,6 +160,10 @@ class TowerDefense:
                                 self.map_ui_back_btn.move_to()
                                 self.map_ui_play_btn.move_to()
                                 self.map_ui_map_1.move_to()
+                                self.map_button.move_away()
+                                self.upgrades_button.move_away()
+                                self.back_button.move_away()
+                                self.logo.move_away()
                             if ui.name == "upgrades":
                                 print("Upgrades button clicked")
                             if ui.name == "back":
@@ -180,8 +186,10 @@ class TowerDefense:
                                 self.map_ui_back_btn.move_away()
                                 self.map_ui_play_btn.move_away()
                                 self.map_ui_map_1.move_away()
-
-
+                                self.map_button.move_to()
+                                self.upgrades_button.move_to()
+                                self.back_button.move_to()
+                                self.logo.move_to()
 
             # map current mouse position to game-surface coordinates for hover checks (stretch mapping)
             mx, my = pygame.mouse.get_pos()
