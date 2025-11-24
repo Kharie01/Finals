@@ -142,7 +142,7 @@ class TowerDefense:
                                     pass
                             if ui.name == "play":
                                 self.show_start = False
-                                self.ui_sprites.remove(self.play_button, self.settings_button, self.exit_button, self.logo, self.start_screen_bg)
+                                self.ui_sprites.remove(self.play_button, self.settings_button, self.exit_button, self.logo)
                                 self.map_selection()
                             if ui.name == "settings":
                                 print("Settings button clicked")
