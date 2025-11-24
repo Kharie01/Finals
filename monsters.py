@@ -14,6 +14,7 @@ class Monster(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center = self.pos)
 
         self.speed = speed
+        self.damage = 10
 
     def move(self):
         if self.target_waypoint < len(self.waypoints):
@@ -44,6 +45,6 @@ class Monster(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = self.pos
 
-    def update(self):
+    def update(self, dt=None):
         self.move()
         self.rotate()
