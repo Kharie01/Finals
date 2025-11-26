@@ -25,10 +25,13 @@ class TowerDefense:
 
         self.screen = pygame.display.set_mode((self.GAME_WIDTH, self.GAME_HEIGHT), pygame.RESIZABLE)
         pygame.display.set_caption("Fortress Frontline")
+        pygame.display.set_icon(pygame.image.load(join('assets', 'images', 'icon', 'gameicon.ico')).convert_alpha())
 
         # Sprite groups
         self.all_sprites = AllSprite(self.GAME_WIDTH, self.GAME_HEIGHT)
         self.ui_sprites = AllSprite(self.GAME_WIDTH, self.GAME_HEIGHT)
+        self.castles = pygame.sprite.Group()  # Initialize empty castles group
+        self.monsters = pygame.sprite.Group()  # Initialize empty monsters group
 
         self.clock = pygame.time.Clock()
         self.running = True
@@ -36,6 +39,8 @@ class TowerDefense:
         self.show_start = False
         self.show_map = False
         
+        self.inGame = False
+
         # Sounds
         self.button_sfx = pygame.mixer.Sound(join('assets', 'audio', 'sfx', 'button-click.wav'))
         self.start_bgmusic = pygame.mixer.Sound(join('assets', 'audio', 'bgm', 'start_bgm.wav'))
@@ -56,6 +61,7 @@ class TowerDefense:
             "upgrade": pygame.image.load(join('assets', 'images', 'mapscreen', 'upgrade.png')).convert_alpha()
         }
         self.upgrades_images = {}
+        self.map_images = {"map1": pygame.image.load(join('assets', 'images', 'mapscreen', 'map1.png')).convert_alpha()}
 
         #turret 
         # Tower drag-and-drop
@@ -103,41 +109,45 @@ class TowerDefense:
         # list of tower buttons    # currently selected tower
         
         self.setup()  # make sure setup is called after
+        # Setup game map, sprites, castles, monsters
+        self.start_screen()
+
     # -----------------------------------------------
     # Start screen UI
     # -----------------------------------------------
     def start_screen(self):
         self.show_start = True
         if not hasattr(self, "start_screen_bg"):
-            self.start_screen_bg = UserInterface("startscreen", (0, 0), self.startscreen_images["start"], (self.GAME_WIDTH, self.GAME_HEIGHT), self.ui_sprites)
+            self.start_screen_bg = UserInterface("startscreen", (0, 0), self.startscreen_images["start"], (self.GAME_WIDTH, self.GAME_HEIGHT), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT)
 
         # Clouds background
         if not hasattr(self, "cloud"):
             for cloud in range(5):
-                self.cloud = UserInterface(
-                    "cloud",
-                    (randint(-100, self.GAME_WIDTH), randint(0, self.GAME_HEIGHT // 2 - 200)),
-                    pygame.image.load(join('assets', 'images', 'startscreen', 'clouds', f'cloud{randint(1, 4)}.png')).convert_alpha(),
-                    (300, 80),
-                    self.ui_sprites
-                )
+                self.cloud = UserInterface("cloud",(randint(-100, self.GAME_WIDTH), randint(0, self.GAME_HEIGHT // 2 - 200)),pygame.image.load(join('assets', 'images', 'startscreen', 'clouds', f'cloud{randint(1, 4)}.png')).convert_alpha(),(300, 80),self.ui_sprites)
 
-        # UI buttons
-        self.logo = UserInterface("logo", (self.GAME_WIDTH // 2 + 360, self.GAME_HEIGHT // 2 - 250), self.startscreen_images["logo"], (417, 146), self.ui_sprites)
-        self.play_button = UserInterface("play", (self.GAME_WIDTH // 2 + 360, self.GAME_HEIGHT // 2 - 100), self.startscreen_images["play"], (150, 65), self.ui_sprites)
-        self.settings_button = UserInterface("settings", (self.GAME_WIDTH // 2 + 360, self.GAME_HEIGHT // 2), self.startscreen_images["setting"], (254, 68), self.ui_sprites)
-        self.exit_button = UserInterface("exit", (self.GAME_WIDTH // 2 + 360, self.GAME_HEIGHT // 2 + 100), self.startscreen_images["exit"], (139, 58), self.ui_sprites)
+        self.logo = UserInterface("logo", (self.GAME_WIDTH // 2 + 360, self.GAME_HEIGHT // 2 - 250), self.startscreen_images["logo"], (417, 146), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT)
+        self.play_button = UserInterface("play", (self.GAME_WIDTH // 2 + 360, self.GAME_HEIGHT // 2 - 100), self.startscreen_images["play"], (150, 65), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT)
+        self.settings_button = UserInterface("settings", (self.GAME_WIDTH // 2 + 360, self.GAME_HEIGHT // 2), self.startscreen_images["setting"], (254, 68), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT)
+        self.exit_button = UserInterface("exit", (self.GAME_WIDTH // 2 + 360, self.GAME_HEIGHT // 2 + 100), self.startscreen_images["exit"], (139, 58), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT)
 
     # -----------------------------------------------
     # Map selection screen
     # -----------------------------------------------
     def map_selection(self):
         self.show_map = True
-        self.ui_sprites.add(self.logo)
+        self.map_selected = False
 
-        self.map_button = UserInterface("map", (self.GAME_WIDTH // 2 + 360, self.GAME_HEIGHT // 2 - 100), self.map_selection_images["map"], (150, 65), self.ui_sprites)
-        self.upgrades_button = UserInterface("upgrades", (self.GAME_WIDTH // 2 + 360, self.GAME_HEIGHT // 2), self.map_selection_images["upgrade"], (265, 68), self.ui_sprites)
-        self.back_button = UserInterface("back", (self.GAME_WIDTH // 2 + 360, self.GAME_HEIGHT // 2 + 100), self.map_selection_images["back"], (139, 58), self.ui_sprites)
+        self.map_button = UserInterface("map", (self.GAME_WIDTH // 2 + 360, self.GAME_HEIGHT // 2 - 100), self.map_selection_images["map"], (150, 65), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT)
+        self.upgrades_button = UserInterface("upgrades", (self.GAME_WIDTH // 2 + 360, self.GAME_HEIGHT // 2), self.map_selection_images["upgrade"], (265, 68), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT)
+        self.back_button = UserInterface("back", (self.GAME_WIDTH // 2 + 360, self.GAME_HEIGHT // 2 + 100), self.map_selection_images["back"], (139, 58), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT)
+
+        self.map_ui_surface = UserInterface("ui_bg", (-self.GAME_WIDTH, self.GAME_HEIGHT // 2), pygame.image.load(join('assets', 'images', 'grybg.png')).convert_alpha(), (self.GAME_WIDTH, self.GAME_HEIGHT), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT)
+        self.map_ui_surface.set_opacity(200)  # Slightly transparent (0-255, 255 is fully opaque)
+        self.map_ui_back_btn = UserInterface("ui_back_btn", (-self.GAME_WIDTH + 60, 0 + 60), self.map_selection_images["back"], (139, 58), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT)
+        self.map_ui_play_btn = UserInterface("ui_play_btn", (-self.GAME_WIDTH, self.GAME_HEIGHT - 200), self.startscreen_images["play"], (150, 65), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT)
+        self.map_ui_map_1 = UserInterface("map_1", (-self.GAME_WIDTH // 2 - 150, 0 + 150), self.map_images["map1"], (250, 250), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT)
+
+        self.map_ui_play_btn.set_dimmed(True)
 
     # -----------------------------------------------
     # Setup map, sprites, castles, monsters
@@ -174,8 +184,8 @@ class TowerDefense:
         # Waypoints
         self.waypoints = [(waypoint.x, waypoint.y) for waypoint in tmx_data.get_layer_by_name("Waypoints1")]
 
-        # Monsters
-        self.monsters = pygame.sprite.Group()
+        # Clear and repopulate monster group
+        self.monsters.empty()
         monster_img = pygame.image.load(join('assets', 'images', '0.png'))
         for _ in range(5):
             monster = Monster(self.waypoints, monster_img, randint(1, 5), self.all_sprites)
@@ -273,7 +283,7 @@ class TowerDefense:
                                 except: pass
                             if ui.name == "play":
                                 self.show_start = False
-                                self.ui_sprites.remove(self.play_button, self.settings_button, self.exit_button, self.logo)
+                                self.ui_sprites.remove(self.play_button, self.settings_button, self.exit_button)
                                 self.map_selection()
                             elif ui.name == "settings":
                                 print("Settings button clicked")
@@ -285,7 +295,7 @@ class TowerDefense:
                                 print("Upgrades button clicked")
                             elif ui.name == "back":
                                 self.show_map = False
-                                self.ui_sprites.remove(self.map_button, self.upgrades_button, self.back_button, self.logo)
+                                self.ui_sprites.remove(self.map_button, self.upgrades_button, self.back_button, self.map_ui_surface)
                                 self.start_screen()
 
                     # Tower menu click → start dragging
@@ -346,7 +356,7 @@ class TowerDefense:
 
             # Update all sprites
             self.all_sprites.update(dt)
-            self.ui_sprites.update(dt)
+            self.ui_sprites.update(dt, (gx, gy))
             self.castles.update(dt)
 
             # Collisions: monsters hitting castles
