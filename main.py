@@ -125,6 +125,7 @@ class TowerDefense:
         self.load_permanent_upgrades()
 
         self.start_screen()  # make sure setup is called after
+        self.start_bgmusic.play(loops=-1)
         # Setup game map, sprites, castles, monsters
 
     # ----------------------------------------------
