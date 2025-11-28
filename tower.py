@@ -1,159 +1,158 @@
 import pygame
 
 class Tower(pygame.sprite.Sprite):
-    def __init__(self, pos, images, damage=10, range_=100, fire_rate=1.0,
-                 projectile_image=None, projectile_speed=300):
-        """
-        pos: tuple (x, y)
-        images: list of Surfaces for tower animation
-        damage: damage per projectile
-        range_: attack range in pixels
-        fire_rate: shots per second
-        projectile_image: Surface for projectile
-        projectile_speed: speed of projectile
-        """
+    def __init__(self, pos, idle_frames, building_frames, upgrade_frames,
+                 damage=10, range_=100, fire_rate=1.0,
+                 projectile_image=None, projectile_speed=300, size=(64, 64),money_system=None):
+
         super().__init__()
 
-        # --- Animation & Images ---
-        if isinstance(images, pygame.Surface):
-            self.images = [images.copy()]
-        else:
-            self.images = [img.copy() for img in images]
+        # --- Images ---
+        self.idle_frames = [pygame.transform.scale(img, size) for img in idle_frames]
+        self.building_frames = [pygame.transform.scale(img, size) for img in building_frames]
+        self.upgrade_frames = [pygame.transform.scale(img, size) for img in upgrade_frames]
 
+        # --- Animation & State ---
+        self.state = "building"  # building, idle, upgrading
+        self.level = 0  # current upgrade level
         self.current_frame = 0
-        self.animation_speed = 0.1  # seconds per frame
-        self.time_accumulator = 0.0
-        self.image = self.images[self.current_frame]
+        self.frame_timer = 0
+        self.frame_rate = 0.2  # seconds per frame
+        self.upgrade_timer = 0
+        self.upgrade_duration = 0.5  # seconds for upgrade transition
+        self.image = self.building_frames[0]
+
+        # --- Position ---
         self.rect = self.image.get_rect(center=(int(pos[0]), int(pos[1])))
 
         # --- Tower Stats ---
         self.range = range_
         self.damage = damage
         self.fire_rate = fire_rate
-        self.cooldown = 0.0
-        self.last_shot = 0
-
         self.projectile_image = projectile_image
         self.projectile_speed = projectile_speed
         self.projectiles = pygame.sprite.Group()
+        self.last_shot = 0
 
-        # --- UI & Selection ---
+         # --- Money System ---
+        self.money_system = money_system  # store reference
+
+        # --- Selection & UI ---
         self.selected = False
         self.delete_button = None
         self.upgrade_button = None
 
-        # --- Tower States ---
-        self.building = True          # True while building animation plays
-        self.build_progress = 0.0     # 0.0 → 1.0
-        self.upgrading = False
-        self.upgrade_progress = 0.0
-
-        # --- Scaling for build/upgrade animation ---
-        self.original_image = self.image.copy()
-        self.scale_factor = 0.0  # scale for building animation
-
     # -----------------------------
-    # Main update
+    # Update per frame
     # -----------------------------
     def update(self, dt, monsters=None, all_sprites=None):
-        self._animate(dt)
-        self._handle_building(dt)
-        self._handle_upgrade(dt)
+        self._update_animation(dt)
         self._attack(monsters, all_sprites)
         self.projectiles.update(dt)
 
     # -----------------------------
-    # Tower Animation
+    # Animation handler
     # -----------------------------
-    def _animate(self, dt):
-        self.time_accumulator += dt
-        if self.time_accumulator >= self.animation_speed:
-            frames_to_advance = int(self.time_accumulator / self.animation_speed)
-            self.time_accumulator -= frames_to_advance * self.animation_speed
-            self.current_frame = (self.current_frame + frames_to_advance) % len(self.images)
-            self.original_image = self.images[self.current_frame]
-            # Update scaled image if building or upgrading
-            self._update_scaled_image()
+    def _update_animation(self, dt):
+        self.frame_timer += dt
 
-    # -----------------------------
-    # Building Animation
-    # -----------------------------
-    def _handle_building(self, dt):
-        if self.building:
-            self.build_progress += dt * 2.0  # speed of build animation
-            if self.build_progress >= 1.0:
-                self.build_progress = 1.0
-                self.building = False
-            self._update_scaled_image()
+        if self.state == "building":
+            if self.frame_timer >= self.frame_rate:
+                self.frame_timer = 0
+                self.current_frame += 1
+                if self.current_frame >= len(self.building_frames):
+                    self.state = "idle"
+                    self.current_frame = 0
+                    self.image = self.idle_frames[0]
+                else:
+                    self.image = self.building_frames[self.current_frame]
 
-    # -----------------------------
-    # Upgrade Animation
-    # -----------------------------
-    def _handle_upgrade(self, dt):
-        if self.upgrading:
-            self.upgrade_progress += dt * 2.0
-            if self.upgrade_progress >= 1.0:
-                self.upgrade_progress = 0.0
-                self.upgrading = False
-            self._update_scaled_image()
+        elif self.state == "upgrading":
+            self.upgrade_timer += dt
+            if self.level > 0:
+                self.image = self.upgrade_frames[self.level - 1]  # show new level frame
+            if self.upgrade_timer >= self.upgrade_duration:
+                # Apply pending stats after animation
+                if hasattr(self, "pending_stats"):
+                    self.damage += self.pending_stats["damage"]
+                    self.range += self.pending_stats["range"]
+                    self.fire_rate += self.pending_stats["fire_rate"]
+                    del self.pending_stats
 
-    # -----------------------------
-    # Scale image for build/upgrade effect
-    # -----------------------------
-    def _update_scaled_image(self):
-        scale = self.build_progress if self.building else 1.0 + 0.2 * self.upgrade_progress
-        size = (max(1, int(self.original_image.get_width() * scale)),
-                max(1, int(self.original_image.get_height() * scale)))
-        self.image = pygame.transform.scale(self.original_image, size)
-        self.rect = self.image.get_rect(center=self.rect.center)
+                self.state = "idle"
+                self.upgrade_timer = 0
+
+        # Queue next upgrade if needed
+        if hasattr(self, "upgrade_queued") and self.upgrade_queued:
+            self.upgrade_queued = False
+            self.upgrade()
+
+        # Check if an upgrade was queued
+        if hasattr(self, "upgrade_queued") and self.upgrade_queued:
+            self.upgrade_queued = False
+            self.upgrade()
+
+
+        elif self.state == "idle":
+            # Optional: loop idle frames if multiple
+            if len(self.idle_frames) > 1 and self.frame_timer >= self.frame_rate:
+                self.frame_timer = 0
+                self.current_frame = (self.current_frame + 1) % len(self.idle_frames)
+                self.image = self.idle_frames[self.current_frame]
 
     # -----------------------------
     # Attack Logic
     # -----------------------------
     def _attack(self, monsters, all_sprites):
-        if monsters and not self.building:
-            self.cooldown -= pygame.time.get_ticks() / 1000.0
-            # Find nearest target
-            target = self.get_target(monsters)
-            if target and pygame.time.get_ticks() - self.last_shot >= 1000 / self.fire_rate:
-                self.shoot(target, all_sprites)
-                self.last_shot = pygame.time.get_ticks()
+        if not monsters or self.state == "building":
+            return
+
+        target = self.get_target(monsters)
+        if target:
+            now = pygame.time.get_ticks()
+            if now - self.last_shot >= 1000 / self.fire_rate:
+                from projectile import Projectile
+                proj = Projectile(
+                    self.rect.center,
+                    target,
+                    self.damage,
+                    self.projectile_image,
+                    self.projectile_speed,
+                    self.projectiles
+                )
+                if all_sprites:
+                    all_sprites.add(proj)
+                self.last_shot = now
+    
+    def on_monster_killed(self):
+        if self.money_system:
+            self.money_system.on_enemy_killed()
 
     def get_target(self, monsters):
-        """Return nearest monster within range"""
         nearest = None
-        min_dist_sq = self.range * self.range
+        min_dist_sq = self.range ** 2
         for m in monsters:
             dx = m.rect.centerx - self.rect.centerx
             dy = m.rect.centery - self.rect.centery
-            dist_sq = dx*dx + dy*dy
+            dist_sq = dx * dx + dy * dy
             if dist_sq <= min_dist_sq:
                 nearest = m
                 min_dist_sq = dist_sq
         return nearest
 
-    def shoot(self, target, all_sprites):
-        from projectile import Projectile
-        proj = Projectile(
-            self.rect.center,
-            target,
-            self.damage,
-            self.projectile_image,
-            self.projectile_speed,
-            self.projectiles
-        )
-        if all_sprites:
-            all_sprites.add(proj)
-
     # -----------------------------
     # Upgrade Tower
     # -----------------------------
     def upgrade(self):
-        self.damage += 5
-        self.range += 20
-        self.fire_rate += 0.5
-        self.upgrading = True
-        self.upgrade_progress = 0.0
+        if self.state != "upgrading" and self.level < len(self.upgrade_frames):
+            self.level += 1
+            self.state = "upgrading"
+            self.upgrade_timer = 0
+            self.current_frame = 0
+            # Queue stats update after animation
+            self.pending_stats = {"damage": 5, "range": 20, "fire_rate": 0.5}
+
+
 
     # -----------------------------
     # Selection & UI
@@ -165,14 +164,20 @@ class Tower(pygame.sprite.Sprite):
         self.selected = False
 
     def draw_selection(self, surface):
-        if self.selected:
-            cx, cy = self.rect.center
-            pygame.draw.circle(surface, (0, 0, 255), (cx, cy), self.range, 2)
-            # Upgrade/Delete buttons
-            self.delete_button = pygame.Rect(self.rect.right + 10, self.rect.top, 50, 30)
-            self.upgrade_button = pygame.Rect(self.rect.right + 10, self.rect.top + 40, 50, 30)
-            pygame.draw.rect(surface, (255, 0, 0), self.delete_button)
-            pygame.draw.rect(surface, (0, 255, 0), self.upgrade_button)
-        else:
+        if not self.selected:
             self.delete_button = None
             self.upgrade_button = None
+            return
+
+        # Draw range circle
+        cx, cy = self.rect.center
+        overlay = pygame.Surface((self.range * 2, self.range * 2), pygame.SRCALPHA)
+        pygame.draw.circle(overlay, (0, 255, 0, 50), (self.range, self.range), self.range)
+        pygame.draw.circle(surface, (0, 0, 255), (cx, cy), self.range, 2)
+        surface.blit(overlay, (cx - self.range, cy - self.range))
+
+        # Draw upgrade/delete buttons
+        self.delete_button = pygame.Rect(self.rect.right + 10, self.rect.top, 50, 30)
+        self.upgrade_button = pygame.Rect(self.rect.right + 10, self.rect.top + 40, 50, 30)
+        pygame.draw.rect(surface, (255, 0, 0), self.delete_button)
+        pygame.draw.rect(surface, (0, 255, 0), self.upgrade_button)

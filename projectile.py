@@ -1,5 +1,7 @@
 import pygame
 
+PROJECTILE_SIZE = (10, 10)
+
 class Projectile(pygame.sprite.Sprite):
     def __init__(self, pos, target, damage, image=None, speed=300, groups=None):
         super().__init__(groups)
@@ -10,11 +12,20 @@ class Projectile(pygame.sprite.Sprite):
 
         # Image
         if image is None:
-            self.image = pygame.Surface((10,10), pygame.SRCALPHA)
-            pygame.draw.circle(self.image, (255,0,0), (5,5), 5)
+            # Default simple circle projectile
+            self.image = pygame.Surface(PROJECTILE_SIZE, pygame.SRCALPHA)
+            pygame.draw.circle(
+                self.image,
+                (255, 0, 0),
+                (PROJECTILE_SIZE[0] // 2, PROJECTILE_SIZE[1] // 2),
+                PROJECTILE_SIZE[0] // 2
+            )
         else:
-            self.image = image.copy()
+            # Always scale custom projectile images
+            self.image = pygame.transform.scale(image.copy(), PROJECTILE_SIZE)
+
         self.rect = self.image.get_rect(center=self.pos)
+
 
     def update(self, dt):
         if not self.target or not self.target.alive():
