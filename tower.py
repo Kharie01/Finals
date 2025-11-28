@@ -2,8 +2,9 @@ import pygame
 
 class Tower(pygame.sprite.Sprite):
     def __init__(self, pos, idle_frames, building_frames, upgrade_frames,
-                 damage=10, range_=100, fire_rate=1.0,
-                 projectile_image=None, projectile_speed=300, size=(64, 64),money_system=None):
+                damage=10, range_=100, fire_rate=1.0,
+                projectile_image=None, projectile_speed=300, size=(64, 64),
+                money_system=None, tower_type=None):
 
         super().__init__()
 
@@ -34,7 +35,18 @@ class Tower(pygame.sprite.Sprite):
         self.projectiles = pygame.sprite.Group()
         self.last_shot = 0
 
-         # --- Money System ---
+        # --- Apply permanent upgrades (global stat boosts) ---
+        self.tower_type = tower_type
+
+        if tower_type and hasattr(money_system, "game"):
+            upgrades = money_system.game.permanent_upgrades.get(tower_type, {})
+
+            self.damage *= upgrades.get("damage_mult", 1.0)
+            self.range *= upgrades.get("range_mult", 1.0)
+            self.fire_rate *= upgrades.get("fire_rate_mult", 1.0)
+            self.projectile_speed *= upgrades.get("projectile_speed_mult", 1.0)
+
+        # --- Money System ---
         self.money_system = money_system  # store reference
 
         # --- Selection & UI ---

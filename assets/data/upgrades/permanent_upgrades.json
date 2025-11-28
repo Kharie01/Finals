@@ -1,0 +1,26 @@
+{
+    "archer_tower": {
+        "damage_mult": 1.0,
+        "range_mult": 1.0,
+        "fire_rate_mult": 1.0,
+        "projectile_speed_mult": 1.0
+    },
+    "stone_tower": {
+        "damage_mult": 1.0,
+        "range_mult": 1.0,
+        "fire_rate_mult": 1.0,
+        "projectile_speed_mult": 1.0
+    },
+    "slingshot_tower": {
+        "damage_mult": 1.0,
+        "range_mult": 1.0,
+        "fire_rate_mult": 1.0,
+        "projectile_speed_mult": 1.0
+    },
+    "bomb_tower": {
+        "damage_mult": 1.0,
+        "range_mult": 1.0,
+        "fire_rate_mult": 1.0,
+        "projectile_speed_mult": 1.0
+    }
+}
