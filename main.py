@@ -386,8 +386,6 @@ class TowerDefense:
         self.waypoints = [(waypoint.x, waypoint.y) for waypoint in tmx_data.get_layer_by_name("Waypoints1")]
 
         # Clear and repopulate monster group
-        self.monsters.empty()
-        monster_img = pygame.image.load(join('assets', 'images', '0.png'))
 
         self.path_rects = [pygame.Rect(x, y, TILE_SIZE, TILE_SIZE) for x, y in self.waypoints]
 
