@@ -2,7 +2,7 @@ import os
 # Must be set BEFORE pygame.init()
 os.environ["SDL_VIDEO_CENTERED"] = "1"
 os.environ["SDL_VIDEO_WINDOW_POS"] = "center"
-
+import random
 from settings import *
 from sprites import *
 from monsters import Monster
@@ -26,7 +26,7 @@ class TowerDefense:
 
     def __init__(self):
         pygame.init()
-
+        self.main_castle = None
         self.wave_director = WaveDirector(self.spawn_enemy)
         self.load_display_settings()
         self.settings = self.load_display_settings()
@@ -123,7 +123,11 @@ class TowerDefense:
         self.placed_towers = []       # stores all towers placed
         self.selected_tower = None    # currently selected tower
         self.dragging_tower = None
-    
+         # --- Initialize wave control variables ---
+        self.wave_in_progress = False
+        self.countdown_active = False
+        self.wave_timer = None
+        self.countdown = 0  
         #Money
         self.money_system = MoneySystem(starting_money=500)
 
@@ -146,33 +150,37 @@ class TowerDefense:
 
         with open(json_path, "r") as f:
             data = json.load(f)
-
-        self.tower_menu = []
-        menu_y = self.GAME_HEIGHT - 100
-        x_offset = 50
         
-        base_path = "assets/images/mapscreen/"
+        self.tower_menu = []
 
-        for i, (tower_name, tdata) in enumerate(data.items()):
+        menu_start_x = 30
+        menu_start_y = self.GAME_HEIGHT - 90   # higher so panel is smaller
+
+        slot_w, slot_h = 70, 70   # SHRUNK
+        gap = 25                 # SHRUNK spacing
+
+        slot_index = 0
+
+        for tower_name, tdata in list(data.items())[:4]:
+
+            x = menu_start_x + slot_index * (slot_w + gap)
+            y = menu_start_y
+
+            rect = pygame.Rect(x, y, slot_w, slot_h)
+
             folder = "assets/data/graphics/" + tdata["folder"]
             idle = self.load_image(f"{folder}/{tdata['idle']}")
-            icon = self.load_image(base_path + tdata["icon"])
-            icon = pygame.transform.scale(icon, (80, 80))
-            build_frames = [
-                self.load_image(f"{folder}/{img}") for img in tdata["build"]
-            ]
-            upgrade_frames = [
-                self.load_image(f"{folder}/{img}") for img in tdata["upgrades"]
-            ]
+            icon = pygame.transform.scale(self.load_image("assets/images/mapscreen/" + tdata["icon"]), (slot_w, slot_h))
+            build_frames = [self.load_image(f"{folder}/{img}") for img in tdata["build"]]
+            upgrade_frames = [self.load_image(f"{folder}/{img}") for img in tdata["upgrades"]]
             projectile = self.load_image("assets/data/graphics/" + tdata["projectile"])
-            rect = pygame.Rect(x_offset + i * 100, menu_y, 80, 80)
 
             self.tower_menu.append({
                 "name": tower_name,
                 "rect": rect,
                 "class": Tower,
-                "idle": idle,
                 "icon": icon,
+                "idle": idle,
                 "building_frames": build_frames,
                 "upgrade_images": upgrade_frames,
                 "damage": tdata["damage"],
@@ -182,6 +190,8 @@ class TowerDefense:
                 "projectile_speed": tdata["projectile_speed"],
                 "size": tuple(tdata["size"])
             })
+
+            slot_index += 1
 
     def load_permanent_upgrades(self):
         path = "assets/data/upgrades/permanent_upgrades.json"
@@ -391,35 +401,28 @@ class TowerDefense:
 
     def spawn_enemy(self, enemy_type):
         """Spawns a monster based on its type with correct sprite and stats."""
-    
-        # Load stats for this enemy type
+
+        # Get stats for this enemy type
         stats = ENEMY_TYPES.get(enemy_type, ENEMY_TYPES["grunt"])
-    
-        # Build image path automatically
-        image_path = join('assets', 'images', 'enemies', f"{enemy_type}.png")
-    
-        # Try to load image — fallback for missing file
-        try:
-            monster_img = pygame.image.load(image_path).convert_alpha()
-        except:
-            print(f"[WARNING] Missing enemy sprite: {image_path}. Using default.")
-            monster_img = pygame.image.load(join('assets', 'images', 'enemies', 'grunt.png')).convert_alpha()
-    
-        # Create the monster
+
+        # Create the Monster (animations & speed are handled inside)
         monster = Monster(
+            enemy_type=enemy_type,
             waypoints=self.waypoints,
-            image=monster_img,
-            speed=stats["speed"],
-            group=self.all_sprites
+            group=self.all_sprites,
+            money_system=self.money_system  # <-- pass money system here
         )
-    
-        # Assign additional attributes
+
+        # Assign extra attributes
         monster.hp = stats["hp"]
+        monster.max_hp = stats["hp"]
         monster.flying = stats.get("flying", False)
-        monster.type = enemy_type  # optional but useful
-    
+        monster.type = enemy_type
+
         # Add to monster group
         self.monsters.add(monster)
+
+        
 
     def can_place_tower(self, pos, tower_size=(64,64)):
         px, py = pos
@@ -456,7 +459,6 @@ class TowerDefense:
 
         return True
 
-
     def draw_tower_ui(self, surface):
         """
         Draw tower selection UI: upgrade/delete buttons and range indicator.
@@ -483,6 +485,76 @@ class TowerDefense:
                 tower.delete_button = None
                 tower.upgrade_button = None
 
+    def draw_right_hud(self, surface):
+        # Right panel matches height of left panel
+        panel_h = 125
+        panel_y = self.GAME_HEIGHT - panel_h - 0
+        panel_w = 380
+        panel_x = self.GAME_WIDTH - panel_w - 20
+
+        pygame.draw.rect(surface, (60,40,30),
+                        (panel_x, panel_y, panel_w, panel_h), border_radius=12)
+        pygame.draw.rect(surface, (100,80,60),
+                        (panel_x, panel_y, panel_w, panel_h), 2, border_radius=12)
+
+        small = pygame.font.Font("assets/Monocraft.ttc", 12)
+        title_f = pygame.font.Font("assets/Monocraft.ttc", 14)
+
+        xpos = panel_x + 15
+        ypos = panel_y + 5
+
+        # =====================
+        # CASTLE HP
+        # =====================
+        surface.blit(title_f.render("CASTLE Health", True, (255,255,255)), (xpos, ypos))
+        ypos += 25
+
+        # load hp
+        castle = self.main_castle
+        if castle is None:
+            hp = max_hp = 100
+        else:
+            hp = castle.hp
+            max_hp = castle.max_hp
+
+        # small HP bar
+        bar_w = 150
+        bar_h = 14
+        pygame.draw.rect(surface, (40,25,20), (xpos, ypos, bar_w, bar_h), border_radius=4)
+        fill = max(0, (hp / max_hp) * bar_w)
+        pygame.draw.rect(surface, (50,200,60), (xpos, ypos, fill, bar_h), border_radius=4)
+
+        # hp text
+        surface.blit(small.render(f"{hp}/{max_hp}", True, (255,255,255)),
+                    (xpos + bar_w + 10, ypos))
+
+        ypos += 25
+
+        # =====================
+        # OTHER STATS
+        # =====================
+
+        surface.blit(small.render(f"MONEY : {self.money_system.money}", True, (255,255,0)),
+                    (xpos, ypos))
+        ypos += 18
+
+        surface.blit(small.render(f"WAVE  : {self.wave_director.ai.wave_number}", True, (255,255,255)),
+                    (xpos, ypos))
+        ypos += 18
+
+        if hasattr(self.wave_director.ai, "formatted_time"):
+            time_str = self.wave_director.ai.formatted_time
+        else:
+            time_str = "00:00"
+
+        surface.blit(small.render(f"TIME  : {time_str}", True, (255,255,255)),
+                    (xpos, ypos))
+        ypos += 18
+
+        cas = getattr(self.wave_director.ai, "casualties", 0)
+        surface.blit(small.render(f"KILLS : {cas}", True, (255,120,120)),
+                    (xpos, ypos))
+    
     # -----------------------------------------------
     # Main game loop
     # -----------------------------------------------
@@ -792,7 +864,7 @@ class TowerDefense:
                 for tower in self.placed_towers:
                     tower.update(dt, self.monsters, self.all_sprites)
                 
-                self.wave_director.update(dt * 1000, self.placed_towers)
+                self.wave_director.update(dt, self.placed_towers)
 
             if self.show_start or self.show_map:
                 self.ui_sprites.update(dt, game_mouse)
@@ -809,6 +881,11 @@ class TowerDefense:
             # --- Collisions ---
             hits = pygame.sprite.groupcollide(self.castles, self.monsters, False, False)
             for castle, monsters in hits.items():
+
+                # AUTO-SELECT THE CORRECT CASTLE THE FIRST TIME IT TAKES DAMAGE
+                if self.main_castle is None:
+                    self.main_castle = castle
+
                 for monster in monsters:
                     castle.take_damage(getattr(monster, "damage", 10))
                     monster.kill()
@@ -820,52 +897,70 @@ class TowerDefense:
                 self.all_sprites.set_target_surface(self.game_surface)
                 self.all_sprites.draw()
 
+                # Draw right-side HUD (castle HP, money, wave, time)
+                self.draw_right_hud(self.game_surface)
+                # --- draw castle health ---
+                for castle in self.castles:
+                    castle.draw_health(self.game_surface)
+
+                for monster in self.monsters:
+                    monster.draw_hp(self.game_surface)
             # Tower UI (selection, range, buttons)
                 self.draw_tower_ui(self.game_surface)
 
             # Dragging tower preview
                 if self.dragging_tower:
                     pos = self.dragging_tower.rect.center
-                    valid = self.can_place_tower(pos)
+                    valid = self.can_place_tower(pos, tower_size=self.dragging_tower.rect.size)
+
+                    # Set color based on validity
                     color = (0, 255, 0) if valid else (255, 0, 0)
-                    overlay = pygame.Surface((80, 80), pygame.SRCALPHA)
-                    pygame.draw.circle(overlay, (*color, 80), (40, 40), 38)
-                    pygame.draw.circle(self.game_surface, color, pos, 40, 3)
-                    self.game_surface.blit(overlay, (pos[0] - 40, pos[1] - 40))
-                    self.game_surface.blit(self.dragging_tower.image, self.dragging_tower.rect.topleft)
 
-                # Draw tower menu
+                    # Correct overlay size to match tower size
+                    w, h = self.dragging_tower.rect.size
+                    scale = 0.6
+                    nw, nh = int(w * scale), int(h * scale)
+                    overlay = pygame.Surface((nw, nh), pygame.SRCALPHA)
+                    
+                    # Draw semi-transparent rectangle
+                    pygame.draw.rect(overlay, (*color, 80), (0, 0, nw, nh))
+                    
+                    # Draw outline rectangle on the game surface
+                    outline_rect = pygame.Rect(pos[0] - nw // 2, pos[1] - nh // 2, nw, nh)
+                    pygame.draw.rect(self.game_surface, color, outline_rect, 3)
+                    
+                    # Blit overlay and tower image
+                    self.game_surface.blit(overlay, (pos[0] - nw // 2, pos[1] - nh // 2))
+                    self.game_surface.blit(self.dragging_tower.image, self.dragging_tower.rect.topleft)\
+                
+                panel_x = 0
+                panel_y = self.GAME_HEIGHT - 120
+                panel_w = 420
+                panel_h = 120
+
+                # Panel background
+                pygame.draw.rect(self.game_surface, (60, 40, 30), (panel_x, panel_y, panel_w, panel_h), border_radius=12)
+                pygame.draw.rect(self.game_surface, (100, 80, 60), (panel_x, panel_y, panel_w, panel_h), 2, border_radius=12)
+
+                font_small = pygame.font.Font("assets/Monocraft.ttc", 12)   # SHRUNK FONT
+
                 for tower_btn in self.tower_menu:
-                    self.game_surface.blit(
-                        pygame.transform.scale(tower_btn["icon"], (tower_btn["rect"].width, tower_btn["rect"].height)),
-                        tower_btn["rect"].topleft
-                    )
+                    x, y = tower_btn["rect"].topleft
 
-                font = pygame.font.Font("assets/Monocraft.ttc", 12)
-                money_font = pygame.font.Font("assets/Monocraft.ttc", 24)
+                    # Slot background (smaller)
+                    pygame.draw.rect(self.game_surface, (90, 70, 55), tower_btn["rect"], border_radius=10)
+                    pygame.draw.rect(self.game_surface, (120, 90, 70), tower_btn["rect"], 2, border_radius=10)
 
-                # 1️⃣ Draw current money
-                money_text = money_font.render(f"Money: {self.money_system.money}", True, (255, 255, 0))
-                self.game_surface.blit(money_text, (10, 10))
+                    # Tower icon (already scaled smaller)
+                    self.game_surface.blit(tower_btn["icon"], tower_btn["rect"].topleft)
 
-                # 2️⃣ Draw each tower button with name & cost
-                for idx, tower_btn in enumerate(self.tower_menu):
-                    # Draw tower icon
-                    self.game_surface.blit(
-                        pygame.transform.scale(tower_btn["icon"], (tower_btn["rect"].width, tower_btn["rect"].height)),
-                        tower_btn["rect"].topleft
-                    )
+                    # Tower name (smaller text)
+                    name_text = font_small.render(tower_btn["name"], True, (255, 255, 255))
+                    self.game_surface.blit(name_text, (x, y - 18))
 
-                    # Draw tower name
-                    tower_name = tower_btn.get("name")  # fallback name
-                    name_text = font.render(tower_name, True, (255, 255, 255))
-                    self.game_surface.blit(name_text, (tower_btn["rect"].x, tower_btn["rect"].y - 25))
-
-                    # Draw tower price
-                    price = self.money_system.TOWER_COST
-                    price_text = font.render(f"${price}", True, (0, 255, 0))
-                    self.game_surface.blit(price_text, (tower_btn["rect"].x, tower_btn["rect"].y + tower_btn["rect"].height + 5))
-
+                    # Price
+                    price_text = font_small.render(f"${self.money_system.TOWER_COST}", True, (0, 255, 0))
+                    self.game_surface.blit(price_text, (x, y + tower_btn["rect"].height + 3))
             # Draw UI
             if self.show_start:
                 self.ui_sprites.set_target_surface(self.game_surface)
@@ -883,7 +978,6 @@ class TowerDefense:
             pygame.display.update()
 
         pygame.quit()
-
 
 # -----------------------------------------------
 # Run game

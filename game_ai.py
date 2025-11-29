@@ -35,6 +35,8 @@ class TowerDefenseEnemyAI:
         random.seed()
 
     def update_state(self):
+        # remove cooldown reset completely
+        # self.wave_cooldown should NOT be touched here
         self.wave_cooldown = 30.0
 
         if self.wave_number < 4:
@@ -74,17 +76,19 @@ class TowerDefenseEnemyAI:
         return None
 
     def can_spawn_wave_now(self):
-        return (time.time() - self.last_wave_time) >= self.wave_cooldown
+        return True
 
     def generate_wave(self, towers, force=False):
         self.update_state()
 
-    # If not forcing and cooldown hasn't passed, return None
-        if not force and not self.can_spawn_wave_now():
-            return None
+        if not force:
+            now = time.time()
+            if now - self.last_wave_time < self.wave_cooldown:
+                return None
 
         strategy = self.pick_strategy()
         wave = self.pick_monsters(strategy)
+
         adapt = self.maybe_adapt(towers)
         if adapt:
             wave.extend(adapt)
@@ -128,7 +132,7 @@ class WaveDirector:
             return
 
         self.spawn_timer += dt
-        if self.spawn_timer >= self.spawn_interval and self.enemies_spawned < len(self.current_wave):
+        if self.spawn_timer >= self.spawn_interval / 1000.0:
             enemy_type = self.current_wave[self.enemies_spawned]
             self.spawn_callback(enemy_type)
             self.enemies_spawned += 1
