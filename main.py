@@ -9,7 +9,9 @@ from monsters import Monster
 from castle import CastleBox
 from user_interface import UserInterface, Dropdown
 from slider import Slider
-from tower import Tower  # import Tower class
+from tower import Tower # import Tower class
+from game_ai import ENEMY_TYPES, WaveDirector
+
 from pytmx.util_pygame import load_pygame
 
 from money import MoneySystem 
@@ -25,6 +27,7 @@ class TowerDefense:
     def __init__(self):
         pygame.init()
 
+        self.wave_director = WaveDirector(self.spawn_enemy)
         self.load_display_settings()
         self.settings = self.load_display_settings()
         self.GAME_WIDTH  = 1280
@@ -51,6 +54,9 @@ class TowerDefense:
         mouse_cursor = pygame.cursors.Cursor((0, 0), mouse_cursor_img)
         pygame.mouse.set_cursor(mouse_cursor)
         
+        # Wave director
+
+
         # Sprite groups
         self.all_sprites = AllSprite(self.GAME_WIDTH, self.GAME_HEIGHT)
         self.ui_sprites = AllSprite(self.GAME_WIDTH, self.GAME_HEIGHT)
@@ -75,6 +81,7 @@ class TowerDefense:
         # Sounds
         self.button_sfx = pygame.mixer.Sound(join('assets', 'audio', 'sfx', 'button-click.wav'))
         self.start_bgmusic = pygame.mixer.Sound(join('assets', 'audio', 'bgm', 'start_bgm.wav'))
+        self.game_bgmusic = pygame.mixer.Sound(join('assets', 'audio', 'bgm', 'game_bgm.wav'))
         self.hover_sfx = pygame.mixer.Sound(join('assets', 'audio', 'sfx', 'mouse-hover.wav'))
 
         # Load UI images
@@ -124,7 +131,7 @@ class TowerDefense:
         self.load_towers_from_json()
         self.load_permanent_upgrades()
 
-        self.setup()  # make sure setup is called after
+        self.start_screen()  # make sure setup is called after
         self.start_bgmusic.play(loops=-1)
         # Setup game map, sprites, castles, monsters
 
@@ -340,6 +347,12 @@ class TowerDefense:
     # Setup map, sprites, castles, monsters
     # -----------------------------------------------
     def setup(self):
+        # reset wave director every game
+        self.wave_director.ai.wave_number = 1
+        self.wave_director.ai.last_wave_time = 0
+        self.wave_director.current_wave = []
+        self.wave_director.enemies_spawned = 0
+
         self.inGame = True
         self.grass_tiles = []  # initialize here
         tmx_data = load_pygame(join('assets', 'data', 'tmx', 'finals.tmx'))
@@ -375,14 +388,25 @@ class TowerDefense:
         # Clear and repopulate monster group
         self.monsters.empty()
         monster_img = pygame.image.load(join('assets', 'images', '0.png'))
-        for _ in range(5):
-            monster = Monster(self.waypoints, monster_img, randint(1, 5), self.all_sprites)
-            self.monsters.add(monster)
 
         self.path_rects = [pygame.Rect(x, y, TILE_SIZE, TILE_SIZE) for x, y in self.waypoints]
 
-        for _ in range(5):
-            Monster(self.waypoints, monster_img, randint(1,5), self.all_sprites)
+    def spawn_enemy(self, enemy_type):
+        """Spawns a monster based on AI output."""
+        monster_img = pygame.image.load(join('assets', 'images', '0.png'))  # or per type
+        stats = ENEMY_TYPES.get(enemy_type, ENEMY_TYPES["grunt"])
+
+        monster = Monster(
+            waypoints=self.waypoints,
+            image=monster_img,
+            speed=stats["speed"],
+            group=self.all_sprites
+        )
+
+        monster.hp = stats["hp"]
+        monster.flying = stats.get("flying", False)
+
+        self.monsters.add(monster)
 
     def can_place_tower(self, pos, tower_size=(64,64)):
         px, py = pos
@@ -468,12 +492,16 @@ class TowerDefense:
                 if event.type == pygame.QUIT:
                     self.running = False
 
-                elif event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
-                    self.fullscreen = not self.fullscreen
-                    if self.fullscreen:
-                        self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-                    else:
-                        self.screen = pygame.display.set_mode((window_w, window_h), pygame.RESIZABLE)
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_F11:
+                        self.fullscreen = not self.fullscreen
+                        if self.fullscreen:
+                            self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+                        else:
+                            self.screen = pygame.display.set_mode((window_w, window_h), pygame.RESIZABLE)
+                    
+                    if event.key == pygame.K_SPACE:
+                        self.wave_director.force_next_wave = True
 
                 elif event.type == pygame.VIDEORESIZE and not self.fullscreen:
                     self.screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
@@ -698,6 +726,7 @@ class TowerDefense:
                                         self.ui_sprites.empty()
                                         self.setup()
                                         self.start_bgmusic.stop()
+                                        self.game_bgmusic.play(loops=-1)
                                 elif ui.name == "ui_back_btn":
                                     self.map_selected = False
                                     self.map_ui_play_btn.set_dimmed(True)
@@ -741,7 +770,6 @@ class TowerDefense:
                             print("Cannot place tower here!")
                         # Clear dragging tower regardless of placement
                         self.dragging_tower = None
-                
 
             # --- Update Sprites ---
             if self.inGame:
@@ -750,6 +778,8 @@ class TowerDefense:
 
                 for tower in self.placed_towers:
                     tower.update(dt, self.monsters, self.all_sprites)
+                
+                self.wave_director.update(dt * 1000, self.placed_towers)
 
             if self.show_start or self.show_map:
                 self.ui_sprites.update(dt, game_mouse)
@@ -759,6 +789,7 @@ class TowerDefense:
                 self.slider_sfx.update(dt, (gx, gy))
 
                 self.start_bgmusic.set_volume(self.slider_music.get_value()/100)
+                self.game_bgmusic.set_volume(self.slider_music.get_value()/100)
                 self.button_sfx.set_volume(self.slider_sfx.get_value()/100)
                 self.hover_sfx.set_volume(self.slider_sfx.get_value()/100)
 
@@ -797,8 +828,8 @@ class TowerDefense:
                         tower_btn["rect"].topleft
                     )
 
-                font = pygame.font.SysFont("Arial", 20)
-                money_font = pygame.font.SysFont("Arial", 24)
+                font = pygame.font.Font("assets/Monocraft.ttc", 12)
+                money_font = pygame.font.Font("assets/Monocraft.ttc", 24)
 
                 # 1️⃣ Draw current money
                 money_text = money_font.render(f"Money: {self.money_system.money}", True, (255, 255, 0))

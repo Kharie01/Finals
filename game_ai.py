@@ -3,11 +3,11 @@ import random
 
 # Define enemy types with attributes
 ENEMY_TYPES = {
-    "grunt":   {"cost": 5,  "speed": 80,  "hp": 60},
-    "fast":    {"cost": 7,  "speed": 150, "hp": 40},
-    "tank":    {"cost": 20, "speed": 45,  "hp": 250},
-    "flying":  {"cost": 10, "speed": 120, "hp": 45, "flying": True},
-    "swarm":   {"cost": 3,  "speed": 95,  "hp": 20},
+    "grunt":   {"cost": 5,  "speed": 1.67,  "hp": 60},
+    "fast":    {"cost": 7,  "speed": 3.00, "hp": 40},
+    "tank":    {"cost": 20, "speed": 1.00,  "hp": 250},
+    "flying":  {"cost": 10, "speed": 2.43, "hp": 45, "flying": True},
+    "swarm":   {"cost": 3,  "speed": 1.95,  "hp": 20},
 }
 
 # Predefined wave patterns
@@ -35,15 +35,14 @@ class TowerDefenseEnemyAI:
         random.seed()
 
     def update_state(self):
+        self.wave_cooldown = 30.0
+
         if self.wave_number < 4:
             self.state = EnemyAIState.EARLY_GAME
-            self.wave_cooldown = 6.0
         elif self.wave_number < 9:
             self.state = EnemyAIState.MID_GAME
-            self.wave_cooldown = 5.0
         else:
             self.state = EnemyAIState.LATE_GAME
-            self.wave_cooldown = 4.0
 
     def pick_strategy(self):
         if self.state == EnemyAIState.EARLY_GAME:
@@ -77,9 +76,11 @@ class TowerDefenseEnemyAI:
     def can_spawn_wave_now(self):
         return (time.time() - self.last_wave_time) >= self.wave_cooldown
 
-    def generate_wave(self, towers):
+    def generate_wave(self, towers, force=False):
         self.update_state()
-        if not self.can_spawn_wave_now():
+
+    # If not forcing and cooldown hasn't passed, return None
+        if not force and not self.can_spawn_wave_now():
             return None
 
         strategy = self.pick_strategy()
@@ -104,16 +105,26 @@ class WaveDirector:
         self.spawn_timer = 0
         self.spawn_interval = 800  # ms per enemy
 
-    def start_wave(self, towers):
-        wave = self.ai.generate_wave(towers)
+        self.force_next_wave = False
+
+    def start_wave(self, towers, force=False):
+        wave = self.ai.generate_wave(towers, force=force)
         if wave:
             print(f"🔥 Starting Wave {self.ai.wave_number - 1} - {wave}")
             self.current_wave = wave
             self.enemies_spawned = 0
+            self.spawn_timer = 0
 
     def update(self, dt, towers):
         if not self.current_wave:
-            self.start_wave(towers)
+            if self.force_next_wave:
+                # Attempt to start now, forcing the AI to bypass cooldown
+                self.start_wave(towers, force=True)
+                # consume the force flag regardless of success (prevents repeated attempts)
+                self.force_next_wave = False
+            else:
+                # Normal behavior (will only start when AI cooldown allows)
+                self.start_wave(towers, force=False)
             return
 
         self.spawn_timer += dt
@@ -123,5 +134,8 @@ class WaveDirector:
             self.enemies_spawned += 1
             self.spawn_timer = 0
 
+        # If finished spawning all enemies, clear current_wave so next can start
         if self.enemies_spawned >= len(self.current_wave):
             self.current_wave = []
+            self.enemies_spawned = 0
+            self.spawn_timer = 0
