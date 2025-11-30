@@ -1,2 +1,2 @@
-1280
-        self.GAME_HEIGHT = 720
+
+                data = json.load(f)

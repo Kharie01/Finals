@@ -37,7 +37,7 @@ class TowerDefenseEnemyAI:
     def update_state(self):
         # remove cooldown reset completely
         # self.wave_cooldown should NOT be touched here
-        self.wave_cooldown = 30.0
+        self.wave_cooldown = 0.0
 
         if self.wave_number < 4:
             self.state = EnemyAIState.EARLY_GAME

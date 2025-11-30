@@ -10,7 +10,8 @@
         "range": 120,
         "fire_rate": 1.2,
         "projectile_speed": 400,
-        "size": [60, 100]
+        "size": [60, 100],
+        "sound": "assets/audio/sfx/arrow-swish_03-306040.mp3"
     },
 
     "Stone Tower": {
@@ -24,10 +25,11 @@
         "range": 180,
         "fire_rate": 0.8,
         "projectile_speed": 300,
-        "size": [50, 70]
+        "size": [50, 70],
+        "sound": "assets/audio/sfx/canon.mp3"
     },
 
-    "Slingshot Tower": {
+    "Slingshot": {
         "folder": "tower/slingshot",
         "idle": "slingshot1.png",
         "icon": "upgrades/slingshot.png",
@@ -38,7 +40,8 @@
         "range": 150,
         "fire_rate": 1.5,
         "projectile_speed": 500,
-        "size": [45, 80]
+        "size": [45, 80],
+        "sound": "assets/audio/sfx/slingshot.mp3"
     },
 
     "Bomb Tower": {
@@ -52,6 +55,7 @@
         "range": 80,
         "fire_rate": 0.5,
         "projectile_speed": 250,
-        "size": [45, 70]
+        "size": [45, 70],
+        "sound": "assets/audio/sfx/fireball.mp3"
     }
 }

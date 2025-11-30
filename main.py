@@ -188,7 +188,8 @@ class TowerDefense:
                 "fire_rate": tdata["fire_rate"],
                 "projectile_image": projectile,
                 "projectile_speed": tdata["projectile_speed"],
-                "size": tuple(tdata["size"])
+                "size": tuple(tdata["size"]),
+                "sound": tdata.get("sound")  # ✅ add sound path from JSON
             })
 
             slot_index += 1
@@ -538,7 +539,7 @@ class TowerDefense:
                     (xpos, ypos))
         ypos += 18
 
-        surface.blit(small.render(f"WAVE  : {self.wave_director.ai.wave_number}", True, (255,255,255)),
+        surface.blit(small.render(f"WAVE  : {self.wave_director.ai.wave_number - 1}", True, (255,255,255)),
                     (xpos, ypos))
         ypos += 18
 
@@ -624,7 +625,8 @@ class TowerDefense:
                             projectile_speed=tower_btn.get("projectile_speed", 300),
                             size=tower_btn.get("size", (64, 64)),
                             money_system=self.money_system,  # pass reference
-                            tower_type=tower_btn["name"].lower().replace(" ", "_")
+                            tower_type=tower_btn["name"].lower().replace(" ", "_"),
+                            sound_path=tower_btn.get("sound")
                         )
                             break
 

@@ -4,7 +4,7 @@ class Tower(pygame.sprite.Sprite):
     def __init__(self, pos, idle_frames, building_frames, upgrade_frames,
                 damage=10, range_=100, fire_rate=1.0,
                 projectile_image=None, projectile_speed=300, size=(64, 64),
-                money_system=None, tower_type=None):
+                money_system=None, tower_type=None,sound_path=None):
 
         super().__init__()
 
@@ -53,6 +53,12 @@ class Tower(pygame.sprite.Sprite):
         self.selected = False
         self.delete_button = None
         self.upgrade_button = None
+
+        # --- Sound ---
+        if sound_path:
+            self.shoot_sound = pygame.mixer.Sound(sound_path)
+        else:
+            self.shoot_sound = None
 
     # -----------------------------
     # Update per frame
@@ -118,7 +124,7 @@ class Tower(pygame.sprite.Sprite):
     def _attack(self, monsters, all_sprites):
         if not monsters or self.state == "building":
             return
-
+        
         target = self.get_target(monsters)
         if target:
             now = pygame.time.get_ticks()
@@ -135,6 +141,8 @@ class Tower(pygame.sprite.Sprite):
                 if all_sprites:
                     all_sprites.add(proj)
                 self.last_shot = now
+                if self.shoot_sound:
+                    self.shoot_sound.play()
     
     def on_monster_killed(self):
         if self.money_system:
