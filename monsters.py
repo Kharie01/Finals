@@ -42,7 +42,7 @@ class Monster(pygame.sprite.Sprite):
     # -----------------------------
     # MOVEMENT + ANIMATION DIRECTION
     # -----------------------------
-    def move(self):
+    def move(self, dt):
         if self.target_waypoint >= len(self.waypoints):
             return
 
@@ -58,7 +58,7 @@ class Monster(pygame.sprite.Sprite):
 
         # Move toward waypoint
         if dist > 0:
-            self.pos += travel.normalize() * min(dist, self.speed)
+            self.pos += travel.normalize() * min(dist, self.speed * dt * 60)
         else:
             self.pos = target
             self.target_waypoint += 1
@@ -68,11 +68,11 @@ class Monster(pygame.sprite.Sprite):
     # -----------------------------
     # WALKING ANIMATION + HIT FLASH
     # -----------------------------
-    def animate(self):
+    def animate(self, dt):
         frames = self.anim[self.anim_dir]
 
         # Frame stepping
-        self.frame += self.frame_speed
+        self.frame += self.frame_speed * dt * 60
         if self.frame >= len(frames):
             self.frame = 0
 
@@ -126,5 +126,5 @@ class Monster(pygame.sprite.Sprite):
         if self.is_hit and (time.time() - self.hit_timer) >= self.hit_duration:
             self.is_hit = False
 
-        self.move()
-        self.animate()
+        self.move(dt)
+        self.animate(dt)

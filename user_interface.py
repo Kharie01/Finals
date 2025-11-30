@@ -30,8 +30,17 @@ class UserInterface(pygame.sprite.Sprite):
         self.dimmed_image = self.make_dimmed_version(self.image, factor=0.5)
         self.is_dimmed = False
 
+        self.parent = None
+        self.offset_x = 0
+        self.offset_y = 0
+
+    def attach(self, parent, offset_x, offset_y):
+        self.parent = parent
+        self.offset_x = offset_x
+        self.offset_y = offset_y
+
     def onMouseOver(self, game_mouse_pos):
-        if self.name in ("cloud", "startscreen", "slider_music", "slider_sfx"):
+        if self.name in ("cloud", "startscreen", "slider_music", "slider_sfx", "archer_tower", "stone_tower", "slingshot_tower", "bomb_tower"):
             return
 
         if self.rect.collidepoint(game_mouse_pos):
@@ -96,13 +105,15 @@ class UserInterface(pygame.sprite.Sprite):
         elif self.name == "resolution_dd":
             self.target_pos = pygame.math.Vector2(self.game_width // 2 + 200, 150)
         elif self.name == "archer_tower":
-            self.target_pos = pygame.math.Vector2(self.game_width // 2 - 450, self.game_height // 2)
+            self.target_pos = pygame.math.Vector2(self.game_width // 2 - 450, self.game_height // 2 - 50)
         elif self.name == "stone_tower":
-            self.target_pos = pygame.math.Vector2(self.game_width // 2 - 150, self.game_height // 2)
-        elif self.name == "sling_shot_tower":
-            self.target_pos = pygame.math.Vector2(self.game_width // 2 + 150, self.game_height // 2)
+            self.target_pos = pygame.math.Vector2(self.game_width // 2 - 150, self.game_height // 2 - 50)
+        elif self.name == "slingshot_tower":
+            self.target_pos = pygame.math.Vector2(self.game_width // 2 + 150, self.game_height // 2 - 50)
         elif self.name == "bomb_tower":
-            self.target_pos = pygame.math.Vector2(self.game_width // 2 + 450, self.game_height // 2)
+            self.target_pos = pygame.math.Vector2(self.game_width // 2 + 450, self.game_height // 2 - 50)
+        elif self.name == "pText":
+            self.target_pos = pygame.math.Vector2(self.game_width // 2, self.game_height //2)
         else:
             self.target_pos = None
 
@@ -142,10 +153,12 @@ class UserInterface(pygame.sprite.Sprite):
             self.target_pos = pygame.math.Vector2(-self.game_width // 2 - 450, 150)
         elif self.name == "stone_tower":
             self.target_pos = pygame.math.Vector2(-self.game_width // 2 - 200, 150)
-        elif self.name == "sling_shot_tower":
+        elif self.name == "slingshot_tower":
             self.target_pos = pygame.math.Vector2(-self.game_width // 2 + 50, 150)
         elif self.name == "bomb_tower":
             self.target_pos = pygame.math.Vector2(-self.game_width // 2 + 300, 150)
+        elif self.name == "pText":
+            self.target_pos = pygame.math.Vector2(self.game_width // 2, -self.game_height //2)
         else:
             self.target_pos = None
     
@@ -173,9 +186,15 @@ class UserInterface(pygame.sprite.Sprite):
         self.base_image.set_alpha(alpha)
         self.image = self.base_image
 
+        
+
     def update(self, dt, game_mouse_pos = None):
         if game_mouse_pos is not None:
             self.onMouseOver(game_mouse_pos)
+
+        if self.parent is not None:
+            self.rect.x = self.parent.rect.x + self.offset_x
+            self.rect.y = self.parent.rect.y + self.offset_y
 
         if self.target_pos is not None:
             to_target = self.target_pos - self.pos

@@ -35,7 +35,7 @@ class Projectile(pygame.sprite.Sprite):
         # Compute direction toward target
         direction = pygame.Vector2(self.target.rect.center) - self.pos
         distance = direction.length()
-        if distance <= self.speed * dt:
+        if distance <= self.speed * dt + 2:
             # Hit target
             if hasattr(self.target, "take_damage"):
                 self.target.take_damage(self.damage)

@@ -60,12 +60,16 @@ class Tower(pygame.sprite.Sprite):
         else:
             self.shoot_sound = None
 
+
+        self.shot_cooldown = 1.0 / self.fire_rate      # seconds per shot
+        self.shot_timer = 0.0
+
     # -----------------------------
     # Update per frame
     # -----------------------------
     def update(self, dt, monsters=None, all_sprites=None):
         self._update_animation(dt)
-        self._attack(monsters, all_sprites)
+        self._attack(monsters, all_sprites, dt)
         self.projectiles.update(dt)
 
     # -----------------------------
@@ -73,7 +77,7 @@ class Tower(pygame.sprite.Sprite):
     # -----------------------------
     def _update_animation(self, dt):
         self.frame_timer += dt
-
+        
         if self.state == "building":
             if self.frame_timer >= self.frame_rate:
                 self.frame_timer = 0
@@ -121,14 +125,17 @@ class Tower(pygame.sprite.Sprite):
     # -----------------------------
     # Attack Logic
     # -----------------------------
-    def _attack(self, monsters, all_sprites):
+    def _attack(self, monsters, all_sprites, dt):
         if not monsters or self.state == "building":
             return
         
         target = self.get_target(monsters)
         if target:
-            now = pygame.time.get_ticks()
-            if now - self.last_shot >= 1000 / self.fire_rate:
+            self.shot_timer += dt
+
+            if self.shot_timer >= self.shot_cooldown:
+                self.shot_timer = 0
+
                 from projectile import Projectile
                 proj = Projectile(
                     self.rect.center,
@@ -140,7 +147,6 @@ class Tower(pygame.sprite.Sprite):
                 )
                 if all_sprites:
                     all_sprites.add(proj)
-                self.last_shot = now
                 if self.shoot_sound:
                     self.shoot_sound.play()
     

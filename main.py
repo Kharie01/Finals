@@ -27,12 +27,13 @@ class TowerDefense:
     def __init__(self):
         pygame.init()
         self.main_castle = None
-        self.wave_director = WaveDirector(self.spawn_enemy)
         self.load_display_settings()
         self.settings = self.load_display_settings()
         self.GAME_WIDTH  = 1280
         self.GAME_HEIGHT = 720
         self.fullscreen = False
+        self.time_scale = 1.0
+        self.fast_forward = False
 
         if self.fullscreen:
             self.screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
@@ -60,6 +61,7 @@ class TowerDefense:
         # Sprite groups
         self.all_sprites = AllSprite(self.GAME_WIDTH, self.GAME_HEIGHT)
         self.ui_sprites = AllSprite(self.GAME_WIDTH, self.GAME_HEIGHT)
+        self.settings_sprites = AllSprite(self.GAME_WIDTH, self.GAME_HEIGHT)
 
         self.start_ui = []
         self.settings_ui = []
@@ -75,8 +77,9 @@ class TowerDefense:
         self.fullscreen = False
         self.show_start = False
         self.show_map = False
-        
+        self.paused = False
         self.inGame = False
+        self.settings_ui_created = False
 
         # Sounds
         self.button_sfx = pygame.mixer.Sound(join('assets', 'audio', 'sfx', 'button-click.wav'))
@@ -90,12 +93,16 @@ class TowerDefense:
             "logo": pygame.image.load(join('assets', 'images', 'startscreen', 'logo.png')).convert_alpha(),
             "play": pygame.image.load(join('assets', 'images', 'startscreen', 'play.png')).convert_alpha(),
             "setting": pygame.image.load(join('assets', 'images', 'startscreen', 'settings.png')).convert_alpha(),
-            "exit": pygame.image.load(join('assets', 'images', 'startscreen', 'exit.png')).convert_alpha(),}
+            "exit": pygame.image.load(join('assets', 'images', 'startscreen', 'exit.png')).convert_alpha(),
+            "paused": pygame.image.load(join('assets', 'images', 'startscreen', 'paused.png')).convert_alpha()
+            }
         self.map_selection_images = {
             "map": pygame.image.load(join('assets', 'images', 'mapscreen', 'map.png')).convert_alpha(),
             "back": pygame.image.load(join('assets', 'images', 'mapscreen', 'back.png')).convert_alpha(),
             "upgrade": pygame.image.load(join('assets', 'images', 'mapscreen', 'upgrade.png')).convert_alpha()}
         self.upgrades_images = {"border": pygame.image.load(join('assets', 'images', 'mapscreen', 'border.png')).convert_alpha(),
+                                "upgrade": pygame.image.load(join('assets', 'images', 'mapscreen', 'upgrades', 'up.png')).convert_alpha(),
+                                "downgrade": pygame.image.load(join('assets', 'images', 'mapscreen', 'upgrades', 'down.png')).convert_alpha(),
                                 "archer": pygame.image.load(join('assets', 'images', 'mapscreen', 'upgrades', 'archer.png')).convert_alpha(),
                                 "stone": pygame.image.load(join('assets', 'images', 'mapscreen', 'upgrades', 'stone.png')).convert_alpha(),
                                 "slingshot": pygame.image.load(join('assets', 'images', 'mapscreen', 'upgrades', 'slingshot.png')).convert_alpha(),
@@ -112,11 +119,24 @@ class TowerDefense:
                                 "1280": pygame.image.load(join('assets', 'images', 'startscreen', 'settings', '1280x720.png')).convert_alpha(),
                                 "1600": pygame.image.load(join('assets', 'images', 'startscreen', 'settings', '1600x900.png')).convert_alpha(),
                                 "arrow": pygame.image.load(join('assets', 'images', 'startscreen', 'settings', 'arrow.png')).convert_alpha()}
+        self.game_icons = {
+            "gear": pygame.image.load(join('assets', 'images', 'icon', 'gear.png')).convert_alpha(),
+            "pause": pygame.image.load(join('assets', 'images', 'icon', 'pause.png')).convert_alpha(),
+            "unpause": pygame.image.load(join('assets', 'images', 'icon', 'unpause.png')).convert_alpha(),
+            "2x": pygame.image.load(join('assets', 'images', 'icon', '2x.png')).convert_alpha()
+        }
 
+        # font loader
+        self.small   = pygame.font.Font("assets/Monocraft.ttc", 12)
+        self.title_f = pygame.font.Font("assets/Monocraft.ttc", 14)
 
-        # -------------------
-        # Tower images
-        # -------------------
+        self.multiplier_labels = {
+            "title": self.title_f.render("ACTIVE MULTIPLIERS:", True, (255,255,255)),
+            "dmg":   self.small.render("DMG Mult:", True, (255,0,0)),
+            "range": self.small.render("Range Mult:", True, (0,255,0)),
+            "rate":  self.small.render("Firerate Mult:", True, (0,0,255)),
+            "speed": self.small.render("Projectile Spd Mult:", True, (255,0,255)),
+        }
 
         # Archer Tower
         # Tower drag-and-drop
@@ -289,36 +309,39 @@ class TowerDefense:
         for ui in (self.play_button, self.settings_button, self.exit_button):
             self.start_ui.append(ui)
 
-        self.settings_ui_surface = UserInterface("ui_bg", (-self.GAME_WIDTH, self.GAME_HEIGHT // 2), pygame.image.load(join('assets', 'images', 'grybg.png')).convert_alpha(), (self.GAME_WIDTH, self.GAME_HEIGHT), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, None)
-        self.settings_ui_surface.set_opacity(200) 
-        self.settings_ui_back_btn = UserInterface("play_back_btn", (-self.GAME_WIDTH + 60, 20), self.map_selection_images["back"], (139, 58), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
+        if not self.settings_ui_created:    
+            self.settings_ui_surface = UserInterface("ui_bg", (-self.GAME_WIDTH, self.GAME_HEIGHT // 2), pygame.image.load(join('assets', 'images', 'grybg.png')).convert_alpha(), (self.GAME_WIDTH, self.GAME_HEIGHT), self.settings_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, None)
+            self.settings_ui_surface.set_opacity(200) 
+            self.settings_ui_back_btn = UserInterface("play_back_btn", (-self.GAME_WIDTH + 60, 20), self.map_selection_images["back"], (139, 58), self.settings_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
 
-        # settings
-        self.settings_ui_display = UserInterface("ui_display", (-self.GAME_WIDTH, 150), self.settings_images["display"], (254, 68), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
-        self.settings_ui_music = UserInterface("ui_music", (-self.GAME_WIDTH, 570), self.settings_images["music"], (200, 65), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
-        self.settings_ui_sfx = UserInterface("ui_sfx", (-self.GAME_WIDTH, 670), self.settings_images["sfx"], (150, 65), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
+            # settings
+            self.settings_ui_display = UserInterface("ui_display", (-self.GAME_WIDTH, 150), self.settings_images["display"], (254, 68), self.settings_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
+            self.settings_ui_music = UserInterface("ui_music", (-self.GAME_WIDTH, 570), self.settings_images["music"], (200, 65), self.settings_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
+            self.settings_ui_sfx = UserInterface("ui_sfx", (-self.GAME_WIDTH, 670), self.settings_images["sfx"], (150, 65), self.settings_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
 
-        self.slider_music = Slider("slider_music", (-self.GAME_WIDTH // 2 + 300, 470), bar_surface=self.slider_images["bar"], bar_scale=(600, 40), handle_surface=self.slider_images["handle"], handle_scale=(45, 45), ui_group=self.ui_sprites, min_value=0, max_value=100, default_value=50, game_width=self.GAME_WIDTH, game_height=self.GAME_HEIGHT, hover_sfx=self.hover_sfx)
-        self.slider_sfx = Slider("slider_sfx", (-self.GAME_WIDTH // 2 + 300, 570), bar_surface=self.slider_images["bar"], bar_scale=(600, 40), handle_surface=self.slider_images["handle"], handle_scale=(45, 45), ui_group=self.ui_sprites, min_value=0, max_value=100, default_value=50, game_width=self.GAME_WIDTH, game_height=self.GAME_HEIGHT, hover_sfx=self.hover_sfx)
+            self.slider_music = Slider("slider_music", (-self.GAME_WIDTH // 2 + 300, 470), bar_surface=self.slider_images["bar"], bar_scale=(600, 40), handle_surface=self.slider_images["handle"], handle_scale=(45, 45), ui_group=self.settings_sprites, min_value=0, max_value=100, default_value=50, game_width=self.GAME_WIDTH, game_height=self.GAME_HEIGHT, hover_sfx=self.hover_sfx)
+            self.slider_sfx = Slider("slider_sfx", (-self.GAME_WIDTH // 2 + 300, 570), bar_surface=self.slider_images["bar"], bar_scale=(600, 40), handle_surface=self.slider_images["handle"], handle_scale=(45, 45), ui_group=self.settings_sprites, min_value=0, max_value=100, default_value=50, game_width=self.GAME_WIDTH, game_height=self.GAME_HEIGHT, hover_sfx=self.hover_sfx)
 
-        self.settings = self.load_display_settings()
-        self.current_resolution = self.settings["resolution"]
+            self.settings = self.load_display_settings()
+            self.current_resolution = self.settings["resolution"]
 
-        self.res_image_map = {
-                                "fullscreen": self.drop_down_images["fullscreen"],
-                                "1280x720": self.drop_down_images["1280"],
-                                "1600x900": self.drop_down_images["1600"]
-                            }
+            self.res_image_map = {
+                                    "fullscreen": self.drop_down_images["fullscreen"],
+                                    "1280x720": self.drop_down_images["1280"],
+                                    "1600x900": self.drop_down_images["1600"]
+                                }
 
-        self.resolution_dropdown = Dropdown("resolution_dd", (-self.GAME_WIDTH//2 + 300, 200), self.res_image_map[self.current_resolution], (401, 75), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
-        self.resolution_dropdown.add_option("fullscreen", self.drop_down_images["fullscreen"], (401,75), offset_y=80, hover_sfx=self.hover_sfx)
-        self.resolution_dropdown.add_option("1280x720", self.drop_down_images["1280"], (401,75), offset_y=160, hover_sfx=self.hover_sfx)
-        self.resolution_dropdown.add_option("1600x900", self.drop_down_images["1600"], (401,75), offset_y=240, hover_sfx=self.hover_sfx)
+            self.resolution_dropdown = Dropdown("resolution_dd", (-self.GAME_WIDTH//2 + 300, 200), self.res_image_map[self.current_resolution], (401, 75), self.settings_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
+            self.resolution_dropdown.add_option("fullscreen", self.drop_down_images["fullscreen"], (401,75), offset_y=80, hover_sfx=self.hover_sfx)
+            self.resolution_dropdown.add_option("1280x720", self.drop_down_images["1280"], (401,75), offset_y=160, hover_sfx=self.hover_sfx)
+            self.resolution_dropdown.add_option("1600x900", self.drop_down_images["1600"], (401,75), offset_y=240, hover_sfx=self.hover_sfx)
 
-        for ui in (self.settings_ui_surface, self.settings_ui_back_btn, self.settings_ui_display, self.settings_ui_music, self.settings_ui_sfx, self.slider_music, self.slider_sfx, self.resolution_dropdown):
-            self.settings_ui.append(ui)
+            for ui in (self.settings_ui_surface, self.settings_ui_back_btn, self.settings_ui_display, self.settings_ui_music, self.settings_ui_sfx, self.resolution_dropdown):
+                self.settings_ui.append(ui)
 
-        self.load_audio_settings()
+            self.load_audio_settings()
+
+            self.settings_ui_created = True
     # -----------------------------------------------
     # Map selection screen
     # -----------------------------------------------
@@ -348,22 +371,164 @@ class TowerDefense:
 
         self.towers = None
         self.archer_tower_upg = UserInterface("archer_tower", (-self.GAME_WIDTH // 2 - 450, 150), self.upgrades_images["archer"], (250, 250), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
-        self.stone_tower_upg = UserInterface("stone_tower", (-self.GAME_WIDTH // 2 - 200, 150), self.upgrades_images["stone"], (250, 250), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
-        self.sling_shot_tower_upg = UserInterface("sling_shot_tower", (-self.GAME_WIDTH // 2 + 50, 150), self.upgrades_images["slingshot"], (250, 250), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
-        self.bomb_tower_upg = UserInterface("bomb_tower", (-self.GAME_WIDTH // 2 + 300, 150), self.upgrades_images["bomb"], (250, 250), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
+        self.upgrade_btn_archer, self.downgrade_btn_archer = self.create_bottom_buttons(self.archer_tower_upg, "archer_tower")
+        self.downgrade_btn_archer.attach(parent=self.archer_tower_upg, offset_x=40, offset_y=self.archer_tower_upg.rect.height + 40)
+        self.upgrade_btn_archer.attach(parent=self.archer_tower_upg, offset_x=self.archer_tower_upg.rect.width - 80, offset_y=self.archer_tower_upg.rect.height + 40)
 
-        for ui in (self.archer_tower_upg, self.stone_tower_upg, self.sling_shot_tower_upg, self.bomb_tower_upg):
+        self.stone_tower_upg = UserInterface("stone_tower", (-self.GAME_WIDTH // 2 - 200, 150), self.upgrades_images["stone"], (250, 250), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
+        self.upgrade_btn_stone, self.downgrade_btn_stone = self.create_bottom_buttons(self.stone_tower_upg, "stone_tower")
+        self.downgrade_btn_stone.attach(parent=self.stone_tower_upg, offset_x=40, offset_y=self.stone_tower_upg.rect.height + 40)
+        self.upgrade_btn_stone.attach(parent=self.stone_tower_upg, offset_x=self.stone_tower_upg.rect.width - 80, offset_y=self.archer_tower_upg.rect.height + 40)
+
+        self.sling_shot_tower_upg = UserInterface("slingshot_tower", (-self.GAME_WIDTH // 2 + 50, 150), self.upgrades_images["slingshot"], (250, 250), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
+        self.upgrade_btn_slingshot, self.downgrade_btn_slingshot = self.create_bottom_buttons(self.sling_shot_tower_upg, "slingshot_tower")
+        self.downgrade_btn_slingshot.attach(parent=self.sling_shot_tower_upg, offset_x=40, offset_y=self.sling_shot_tower_upg.rect.height + 40)
+        self.upgrade_btn_slingshot.attach(parent=self.sling_shot_tower_upg, offset_x=self.sling_shot_tower_upg.rect.width - 80, offset_y=self.archer_tower_upg.rect.height + 40)
+
+        self.bomb_tower_upg = UserInterface("bomb_tower", (-self.GAME_WIDTH // 2 + 300, 150), self.upgrades_images["bomb"], (250, 250), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
+        self.upgrade_btn_bomb, self.downgrade_btn_bomb = self.create_bottom_buttons(self.bomb_tower_upg, "bomb_tower")
+        self.downgrade_btn_bomb.attach(parent=self.bomb_tower_upg, offset_x=40, offset_y=self.bomb_tower_upg.rect.height + 40)
+        self.upgrade_btn_bomb.attach(parent=self.bomb_tower_upg, offset_x=self.bomb_tower_upg.rect.width - 80, offset_y=self.archer_tower_upg.rect.height + 40)
+
+        for ui in (self.archer_tower_upg, self.stone_tower_upg, self.sling_shot_tower_upg, self.bomb_tower_upg, self.upgrade_btn_archer, self.downgrade_btn_archer, self.upgrade_btn_stone, self.downgrade_btn_stone, self.upgrade_btn_slingshot, self.downgrade_btn_slingshot, self.upgrade_btn_bomb, self.downgrade_btn_bomb):
             self.upgrade_ui.append(ui)
+
+    def create_bottom_buttons(self, parent_ui, name_prefix, x_offset=0):
+        """Create upgrade & downgrade buttons under a UI element."""
+        px, py = parent_ui.rect.topleft
+        w, h = parent_ui.rect.size
+
+        button_y = py + h + 40  # position near bottom
+
+        upgrade_btn = UserInterface(
+            f"{name_prefix}_upgrade",
+            (px + 100 + x_offset, button_y),
+            self.upgrades_images["upgrade"],
+            (40, 40),
+            self.ui_sprites,
+            self.GAME_WIDTH,
+            self.GAME_HEIGHT,
+            self.hover_sfx
+        )
+
+        downgrade_btn = UserInterface(
+            f"{name_prefix}_downgrade",
+            (px + w - 80 + x_offset, button_y),
+            self.upgrades_images["downgrade"],
+            (40, 40),
+            self.ui_sprites,
+            self.GAME_WIDTH,
+            self.GAME_HEIGHT,
+            self.hover_sfx
+        )
+
+        return upgrade_btn, downgrade_btn
+
+    def handle_upgrade_button(self, ui_name: str):
+        parts = ui_name.split("_")
+        if len(parts) < 3:
+            return  # Not an upgrade/downgrade button
+
+        tower_name = "_".join(parts[:2])   # 'archer_tower'
+        action = parts[2]                  # 'upgrade' or 'downgrade'
+
+        if tower_name not in self.permanent_upgrades:
+            return
+
+        # Define stat changes
+        UPGRADE = {
+            "damage_mult": 0.10,
+            "range_mult": 0.05,
+            "fire_rate_mult": -0.05,
+            "projectile_speed_mult": 0.10
+        }
+
+        DOWNGRADE = {
+            "damage_mult": -0.10,
+            "range_mult": -0.05,
+            "fire_rate_mult": 0.05,
+            "projectile_speed_mult": -0.10
+        }
+
+        if action == "upgrade":
+            vals = UPGRADE
+        elif action == "downgrade":
+            vals = DOWNGRADE
+        else:
+            return
+
+        tower = self.permanent_upgrades[tower_name]
+
+        tower["damage_mult"] += vals["damage_mult"]
+        tower["damage_mult"] = max(1.0, tower["damage_mult"])
+
+        tower["range_mult"] += vals["range_mult"]
+        tower["range_mult"] = max(1.0, min(tower["range_mult"], 2.0))
+
+        tower["fire_rate_mult"] += vals["fire_rate_mult"]
+        tower["fire_rate_mult"] = max(0.75, min(tower["fire_rate_mult"], 1.0))
+
+        tower["projectile_speed_mult"] += vals["projectile_speed_mult"]
+        tower["projectile_speed_mult"] = max(1.0, min(tower["projectile_speed_mult"], 1.75))
+
+        self.save_permanent_upgrades()
+
+    def draw_tower_multipliers(self, surface, parent_ui, tower_name):
+
+        # Animated rect position (follows movement)
+        small = self.small
+
+        x = parent_ui.rect.x
+        y = parent_ui.rect.y
+
+        xpos = x + 5
+        ypos = y + parent_ui.rect.height + 90
+
+        stats = self.permanent_upgrades.get(tower_name, None)
+        if stats is None:
+            return
+
+        # HEADER
+        surface.blit(self.multiplier_labels["title"], (xpos, ypos))
+        ypos += 25
+
+        def draw_value(value, limit=None):
+            color = (255, 255, 255)
+            text = f"{value:.2f}"
+            if limit is not None and abs(value - limit) < 0.001:  # reached max
+                text += "  (MAXED)"
+                color = (255,255,0)
+            return small.render(text, True, color)
+        # Dynamic values
+        # --- DMG
+        surface.blit(self.multiplier_labels["dmg"], (xpos, ypos))
+        surface.blit(small.render(f"{stats['damage_mult']:.2f}", True, (255,255,255)), 
+                    (xpos + 165, ypos))
+        ypos += 18
+
+        # --- Range
+        surface.blit(self.multiplier_labels["range"], (xpos, ypos))
+        surface.blit(draw_value(stats["range_mult"], limit=2.0),
+                    (xpos + 165, ypos))
+        ypos += 18
+
+        # --- Fire rate
+        surface.blit(self.multiplier_labels["rate"], (xpos, ypos))
+        surface.blit(draw_value(stats["fire_rate_mult"], limit=0.75),
+                    (xpos + 165, ypos))
+        ypos += 18
+
+        # --- Projectile Speed
+        surface.blit(self.multiplier_labels["speed"], (xpos, ypos))
+        surface.blit(draw_value(stats["projectile_speed_mult"], limit=1.75),
+                    (xpos + 165, ypos))
+
     # -----------------------------------------------
     # Setup map, sprites, castles, monsters
     # -----------------------------------------------
     def setup(self):
-        # reset wave director every game
-        self.wave_director.ai.wave_number = 1
-        self.wave_director.ai.last_wave_time = 0
-        self.wave_director.current_wave = []
-        self.wave_director.enemies_spawned = 0
-
+        self.pause_text = UserInterface("pText", (self.GAME_WIDTH // 2, -self.GAME_HEIGHT), self.startscreen_images["paused"], (254, 68), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
+        
         self.inGame = True
         self.grass_tiles = []  # initialize here
         tmx_data = load_pygame(join('assets', 'data', 'tmx', 'finals.tmx'))
@@ -393,14 +558,23 @@ class TowerDefense:
             for obj in tmx_data.get_layer_by_name(layer_name):
                 Objects((obj.x, obj.y), obj.image, (obj.width, obj.height), obj.rotation, self.all_sprites)
 
-        # Waypoints
-        self.waypoints = [(waypoint.x, waypoint.y) for waypoint in tmx_data.get_layer_by_name("Waypoints1")]
+        self.waypoints  = [(wp.x, wp.y) for wp in tmx_data.get_layer_by_name("Waypoints1")]
+        self.waypoints2 = [(wp.x, wp.y) for wp in tmx_data.get_layer_by_name("Waypoints2")]
 
-        # Clear and repopulate monster group
+        # Store them as a list of possible path options
+        self.all_paths = [self.waypoints, self.waypoints2]
+        self.wave_director = WaveDirector(self.spawn_enemy, self.all_paths, self.GAME_WIDTH, self.GAME_HEIGHT)
+
+        # Reset wave director every game
+        self.wave_director.ai.wave_number = 1
+        self.wave_director.ai.last_wave_time = 0
+        self.wave_director.current_wave = []
+        self.wave_director.enemies_spawned = 0
 
         self.path_rects = [pygame.Rect(x, y, TILE_SIZE, TILE_SIZE) for x, y in self.waypoints]
+        self.create_middle_hud_icons()
 
-    def spawn_enemy(self, enemy_type):
+    def spawn_enemy(self, enemy_type, waypoints):
         """Spawns a monster based on its type with correct sprite and stats."""
 
         # Get stats for this enemy type
@@ -409,7 +583,7 @@ class TowerDefense:
         # Create the Monster (animations & speed are handled inside)
         monster = Monster(
             enemy_type=enemy_type,
-            waypoints=self.waypoints,
+            waypoints=waypoints,
             group=self.all_sprites,
             money_system=self.money_system  # <-- pass money system here
         )
@@ -422,8 +596,6 @@ class TowerDefense:
 
         # Add to monster group
         self.monsters.add(monster)
-
-        
 
     def can_place_tower(self, pos, tower_size=(64,64)):
         px, py = pos
@@ -551,6 +723,85 @@ class TowerDefense:
                 tower.delete_button = None
                 tower.upgrade_button = None
 
+    def get_icon_surface(self, name):
+        if name == "pause_toggle":
+            return self.game_icons["pause"]     # default
+        else:
+            return self.game_icons[name]
+    
+    def draw_middle_hud(self, surface):
+        panel_h = 125
+        panel_y = self.GAME_HEIGHT - panel_h
+        panel_w = 380
+        panel_x = (self.GAME_WIDTH // 2) - (panel_w // 2)
+
+        # icon sizes
+        icon_w = 64
+        icon_h = 64
+
+        # Icon order on HUD
+        names = ["gear", "pause_toggle", "2x"]
+
+        # Spacing formula
+        icon_count = 3
+        total_icons_width = icon_count * icon_w
+        total_spacing = panel_w - total_icons_width
+        spacing = total_spacing // (icon_count + 1)
+
+        # X/Y base for all icons
+        x = panel_x + spacing + icon_w // 2
+        y = panel_y + panel_h // 2
+
+        self.hud_icons = {}
+
+        for name in names:
+            ui = UserInterface(
+                name=name,
+                pos=(x, y),
+                surface=self.get_icon_surface(name),   # <— conversion from name → surface
+                scale=(icon_w, icon_h),
+                group=self.ui_sprites,
+                game_width=self.GAME_WIDTH,
+                game_height=self.GAME_HEIGHT
+            )
+            self.hud_icons[name] = ui
+
+            x += icon_w + spacing
+            
+    def create_middle_hud_icons(self):
+        panel_h = 125
+        panel_w = 380
+        panel_x = (self.GAME_WIDTH // 2) - (panel_w // 2)
+        panel_y = self.GAME_HEIGHT - panel_h
+
+        icon_w = 64
+        icon_h = 64
+        names = ["gear", "pause_toggle", "2x"]
+
+        icon_count = len(names)
+        total_icons_width = icon_count * icon_w
+        total_spacing = panel_w - total_icons_width
+        spacing = total_spacing // (icon_count + 1)
+
+        x = panel_x + spacing + icon_w // 2
+        y = panel_y + panel_h // 2
+
+        self.hud_icons = {}
+
+        for name in names:
+            self.ui = UserInterface(
+                name=name,
+                pos=(x, y),
+                surface=self.get_icon_surface(name),
+                scale=(icon_w, icon_h),
+                group=self.ui_sprites,
+                game_width=self.GAME_WIDTH,
+                game_height=self.GAME_HEIGHT,
+                hover_sfx=self.hover_sfx
+            )
+
+            self.hud_icons[name] = self.ui
+            x += icon_w + spacing
 
     def draw_right_hud(self, surface):
         # Right panel matches height of left panel
@@ -622,12 +873,28 @@ class TowerDefense:
         surface.blit(small.render(f"KILLS : {cas}", True, (255,120,120)),
                     (xpos, ypos))
     
+    def toggle_pause(self, ui):
+        self.paused = not self.paused
+
+        # Scale icons to the UI size
+        self.pause_icon_scaled    = pygame.transform.scale(self.game_icons["pause"], ui.base_size)
+        self.unpause_icon_scaled  = pygame.transform.scale(self.game_icons["unpause"], ui.base_size)
+
+        if self.paused:
+            ui.base_image = self.unpause_icon_scaled
+            self.pause_text.move_to()
+        else:
+            ui.base_image = self.pause_icon_scaled
+            self.pause_text.move_away()
+
+        ui.image = ui.base_image
+
     # -----------------------------------------------
     # Main game loop
     # -----------------------------------------------
     def run(self):
         while self.running:
-            dt = self.clock.tick(60) / 1000
+            dt = (self.clock.tick() / 1000) * self.time_scale
             window_w, window_h = self.screen.get_size()
             scale_x = window_w / self.GAME_WIDTH
             scale_y = window_h / self.GAME_HEIGHT
@@ -654,75 +921,84 @@ class TowerDefense:
                     
                     if event.key == pygame.K_SPACE:
                         self.wave_director.force_next_wave = True
+                    
+                    if event.key == pygame.K_ESCAPE:
+                        self.toggle_pause(self.hud_icons["pause_toggle"])
 
                 elif event.type == pygame.VIDEORESIZE and not self.fullscreen:
                     self.screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
 
                 # --- Mouse Input ---
                 elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    if self.dragging_tower:
-                        px, py = self.dragging_tower.rect.center
-                        # Check if tower can be placed
-                        if self.can_place_tower((px, py), self.dragging_tower.rect.size):
-                            # Try spending money
-                            if self.money_system.on_tower_placed():
-                                self.all_sprites.add(self.dragging_tower)
-                                self.placed_towers.append(self.dragging_tower)
-                                print(f"{self.dragging_tower} placed!")
+                    if self.inGame and not self.paused:
+                        if self.dragging_tower:
+                            px, py = self.dragging_tower.rect.center
+                            # Check if tower can be placed
+                            if self.can_place_tower((px, py), self.dragging_tower.rect.size):
+                                # Try spending money
+                                if self.money_system.on_tower_placed():
+                                    self.all_sprites.add(self.dragging_tower)
+                                    self.placed_towers.append(self.dragging_tower)
+                                    print(f"{self.dragging_tower} placed!")
+                                else:
+                                    print("Not enough money to place this tower!")
                             else:
-                                print("Not enough money to place this tower!")
-                        else:
-                            print("Cannot place tower here!")
-                        # Clear dragging tower regardless of placement
-                        self.dragging_tower = None
+                                print("Cannot place tower here!")
+                            # Clear dragging tower regardless of placement
+                            self.dragging_tower = None
 
-                    # 2️⃣ Tower menu click → start dragging
-                    for tower_btn in self.tower_menu:
-                        if tower_btn["rect"].collidepoint(game_mouse):
-                            self.dragging_tower = Tower(
-                            (gx, gy),
-                            [tower_btn["idle"]],
-                            tower_btn["building_frames"],
-                            tower_btn["upgrade_images"],
-                            damage=tower_btn.get("damage", 10),
-                            range_=tower_btn.get("range", 100),
-                            fire_rate=tower_btn.get("fire_rate", 1.0),
-                            projectile_image=tower_btn.get("projectile_image"),
-                            projectile_speed=tower_btn.get("projectile_speed", 300),
-                            size=tower_btn.get("size", (64, 64)),
-                            money_system=self.money_system,  # pass reference
-                            tower_type=tower_btn["name"].lower().replace(" ", "_"),
-                            sound_path=tower_btn.get("sound")
-                        )
-                            break
+                        # 2️⃣ Tower menu click → start dragging
+                        for tower_btn in self.tower_menu:
+                            if tower_btn["rect"].collidepoint(game_mouse):
+                                self.dragging_tower = Tower(
+                                (gx, gy),
+                                [tower_btn["idle"]],
+                                tower_btn["building_frames"],
+                                tower_btn["upgrade_images"],
+                                damage=tower_btn.get("damage", 10),
+                                range_=tower_btn.get("range", 100),
+                                fire_rate=tower_btn.get("fire_rate", 1.0),
+                                projectile_image=tower_btn.get("projectile_image"),
+                                projectile_speed=tower_btn.get("projectile_speed", 300),
+                                size=tower_btn.get("size", (64, 64)),
+                                money_system=self.money_system,  # pass reference
+                                tower_type=tower_btn["name"].lower().replace(" ", "_"),
+                                sound_path=tower_btn.get("sound")
+                            )
+                                break
 
-                    # 3️⃣ Check placed towers for selection / upgrade / delete
-                    self.selected_tower = None
-                    for tower in self.placed_towers:
-                        if tower.delete_button and tower.delete_button.collidepoint(game_mouse):
-                            self.all_sprites.remove(tower)
-                            self.placed_towers.remove(tower)
-                            break
-                        elif tower.upgrade_button and tower.upgrade_button.collidepoint(game_mouse):
-                            # Check if player has enough money to upgrade tower
-                            if self.money_system.on_tower_upgraded():
-                                tower.upgrade()
-                            else:
-                                print("Not enough money to upgrade tower!")
-                            break
-                        elif tower.rect.collidepoint(game_mouse):
-                            self.selected_tower = tower
+                        # 3️⃣ Check placed towers for selection / upgrade / delete
+                        self.selected_tower = None
+                        for tower in self.placed_towers:
+                            if tower.delete_button and tower.delete_button.collidepoint(game_mouse):
+                                self.all_sprites.remove(tower)
+                                self.placed_towers.remove(tower)
+                                break
+                            elif tower.upgrade_button and tower.upgrade_button.collidepoint(game_mouse):
+                                # Check if player has enough money to upgrade tower
+                                if self.money_system.on_tower_upgraded():
+                                    tower.upgrade()
+                                else:
+                                    print("Not enough money to upgrade tower!")
+                                break
+                            elif tower.rect.collidepoint(game_mouse):
+                                self.selected_tower = tower
 
                     # UI interactions
-                    if self.show_start or self.show_map:
+                    if self.show_start or self.show_map or self.inGame:
                         result = self.resolution_dropdown.handle_click((gx, gy))
 
                         if result:
                             self.current_resolution = result
                             self.apply_saved_resolution()
                             continue
+                            
+                        all_ui = (
+                            list(self.ui_sprites) +
+                            list(self.settings_sprites)
+                        )
 
-                        for ui in list(self.ui_sprites):
+                        for ui in all_ui:
                             # IMPORTANT: use game coords for hit detection
                             if ui.rect.collidepoint((gx, gy)):
                                 if ui.name == "resolution_dd":
@@ -746,14 +1022,17 @@ class TowerDefense:
                                         self.ui_sprites.remove(elem)
                                     # show map selection
                                     self.map_selection()
-                                elif ui.name == "settings":
+                                elif ui.name == "settings" or ui.name == "gear":
                                     self.load_audio_settings()
 
-                                    for elem in self.start_ui:
-                                        try:
-                                            elem.move_away()
-                                        except Exception:
-                                            pass
+                                    if self.inGame:
+                                        self.paused = not self.paused
+                                    if self.show_start:
+                                        for elem in self.start_ui:
+                                            try:
+                                                elem.move_away()
+                                            except Exception:
+                                                pass
                                     for elem in self.settings_ui:
                                         try:
                                             elem.move_to()
@@ -771,11 +1050,14 @@ class TowerDefense:
                                     except Exception:
                                         pass
                                 elif ui.name == "play_back_btn":
-                                    for elem in self.start_ui:
-                                        try:
-                                            elem.move_to()
-                                        except Exception:
-                                            pass
+                                    if self.inGame:
+                                        self.paused = not self.paused
+                                    if self.show_start:
+                                        for elem in self.start_ui:
+                                            try:
+                                                elem.move_to()
+                                            except Exception:
+                                                pass
                                     for elem in self.settings_ui:
                                         try:
                                             elem.move_away()
@@ -826,30 +1108,9 @@ class TowerDefense:
                                         except Exception:
                                             pass
                                     self.logo.move_away()
-                                elif ui.name == "archer_tower":
-                                    self.permanent_upgrades["archer_tower"]["damage_mult"] += 0.10
-                                    self.permanent_upgrades["archer_tower"]["range_mult"] += 0.05
-                                    self.permanent_upgrades["archer_tower"]["fire_rate_mult"] *= 0.95
-                                    self.permanent_upgrades["archer_tower"]["projectile_speed_mult"] += 0.10
-                                    self.save_permanent_upgrades()
-                                elif ui.name == "stone_tower":
-                                    self.permanent_upgrades["stone_tower"]["damage_mult"] += 0.10
-                                    self.permanent_upgrades["stone_tower"]["range_mult"] += 0.05
-                                    self.permanent_upgrades["stone_tower"]["fire_rate_mult"] *= 0.95
-                                    self.permanent_upgrades["stone_tower"]["projectile_speed_mult"] += 0.10
-                                    self.save_permanent_upgrades()
-                                elif ui.name == "slingshot_tower":
-                                    self.permanent_upgrades["slingshot_tower"]["damage_mult"] += 0.10
-                                    self.permanent_upgrades["slingshot_tower"]["range_mult"] += 0.05
-                                    self.permanent_upgrades["slingshot_tower"]["fire_rate_mult"] *= 0.95
-                                    self.permanent_upgrades["slingshot_tower"]["projectile_speed_mult"] += 0.10
-                                    self.save_permanent_upgrades()
-                                elif ui.name == "bomb_tower":
-                                    self.permanent_upgrades["bomb_tower"]["damage_mult"] += 0.10
-                                    self.permanent_upgrades["bomb_tower"]["range_mult"] += 0.05
-                                    self.permanent_upgrades["bomb_tower"]["fire_rate_mult"] *= 0.95
-                                    self.permanent_upgrades["bomb_tower"]["projectile_speed_mult"] += 0.10
-                                    self.save_permanent_upgrades()
+                                if "_upgrade" in ui.name or "_downgrade" in ui.name:
+                                    self.handle_upgrade_button(ui.name)
+                                    continue
                                 elif ui.name == "back":
                                     self.show_map = False
                                     for elem in self.map_ui:
@@ -874,6 +1135,20 @@ class TowerDefense:
                                     self.map_ui_play_btn.set_dimmed(False)
                                 elif ui.name == "ui_play_btn":
                                     if self.map_selected:
+
+                                        # Re-add background & UI first
+                                        for ui in self.settings_ui:
+                                            if ui.name not in ("slider_music", "slider_sfx"):
+                                                self.settings_sprites.add(ui)
+
+                                        # NOW add the sliders LAST (handle & bar are inside slider group)
+                                        self.settings_sprites.add(self.slider_music.bar)
+                                        self.settings_sprites.add(self.slider_music.handle)
+
+                                        self.settings_sprites.add(self.slider_sfx.bar)
+                                        self.settings_sprites.add(self.slider_sfx.handle)
+
+
                                         self.show_map = False
                                         self.inGame = True
                                         self.ui_sprites.empty()
@@ -899,6 +1174,14 @@ class TowerDefense:
                                         except Exception:
                                             pass
                                     self.logo.move_to()
+                                elif ui.name == "gear":
+                                    print("settings")
+                                elif ui.name == "pause_toggle":
+                                    self.toggle_pause(self.hud_icons["pause_toggle"])
+                                elif ui.name == "2x":
+                                    self.fast_forward = not self.fast_forward
+                                    self.time_scale = 2.0 if self.fast_forward else 1.0
+                                    print(self.time_scale)
 
                 elif event.type == pygame.MOUSEMOTION:
                     if self.dragging_tower:
@@ -926,37 +1209,41 @@ class TowerDefense:
 
             # --- Update Sprites ---
             if self.inGame:
-                self.all_sprites.update(dt)
-                self.castles.update(dt)
+                if not self.paused:
+                    self.all_sprites.update(dt)
+                    self.castles.update(dt)
 
-                for tower in self.placed_towers:
-                    tower.update(dt, self.monsters, self.all_sprites)
-                
-                self.wave_director.update(dt, self.placed_towers)
+                    for tower in self.placed_towers:
+                        tower.update(dt, self.monsters, self.all_sprites)
 
-            if self.show_start or self.show_map:
-                self.ui_sprites.update(dt, game_mouse)
+                    self.wave_director.update(dt, self.placed_towers)
 
-                self.resolution_dropdown.update(dt, (gx, gy))
-                self.slider_music.update(dt, (gx, gy))
-                self.slider_sfx.update(dt, (gx, gy))
+            self.ui_sprites.update(dt, game_mouse)
+            self.settings_sprites.update(dt,game_mouse)
 
-                self.start_bgmusic.set_volume(self.slider_music.get_value()/100)
-                self.game_bgmusic.set_volume(self.slider_music.get_value()/100)
-                self.button_sfx.set_volume(self.slider_sfx.get_value()/100)
-                self.hover_sfx.set_volume(self.slider_sfx.get_value()/100)
+            self.resolution_dropdown.update(dt, (gx, gy))
+
+            self.slider_music.update(dt, (gx, gy))
+            self.slider_sfx.update(dt, (gx, gy))
+
+            self.start_bgmusic.set_volume(self.slider_music.get_value()/100)
+            self.game_bgmusic.set_volume(self.slider_music.get_value()/100)
+            self.button_sfx.set_volume(self.slider_sfx.get_value()/100)
+            self.hover_sfx.set_volume(self.slider_sfx.get_value()/100)
 
             # --- Collisions ---
-            hits = pygame.sprite.groupcollide(self.castles, self.monsters, False, False)
-            for castle, monsters in hits.items():
+            if self.inGame:
+                if not self.paused:
+                    hits = pygame.sprite.groupcollide(self.castles, self.monsters, False, False)
+                    for castle, monsters in hits.items():
 
-                # AUTO-SELECT THE CORRECT CASTLE THE FIRST TIME IT TAKES DAMAGE
-                if self.main_castle is None:
-                    self.main_castle = castle
+                    # AUTO-SELECT THE CORRECT CASTLE THE FIRST TIME IT TAKES DAMAGE
+                        if self.main_castle is None:
+                            self.main_castle = castle
 
-                for monster in monsters:
-                    castle.take_damage(getattr(monster, "damage", 10))
-                    monster.kill()
+                        for monster in monsters:
+                            castle.take_damage(getattr(monster, "damage", 10))
+                            monster.kill()
 
             # --- Drawing ---
             self.game_surface.fill("grey")
@@ -1030,15 +1317,38 @@ class TowerDefense:
                     price_text = font_small.render(f"${self.money_system.TOWER_COST}", True, (0, 255, 0))
                     self.game_surface.blit(price_text, (x, y + tower_btn["rect"].height + 3))
             # Draw UI
-            if self.show_start:
-                self.ui_sprites.set_target_surface(self.game_surface)
-                self.ui_sprites.draw()
+            # Always draw
+            self.ui_sprites.set_target_surface(self.game_surface)
+            self.ui_sprites.draw()
+            self.settings_sprites.set_target_surface(self.game_surface)
+            self.settings_sprites.draw()
+            self.slider_music.handle_event(event, (gx, gy))
+            self.slider_sfx.handle_event(event, (gx, gy))
 
-                self.slider_music.handle_event(event, (gx, gy))
-                self.slider_sfx.handle_event(event, (gx, gy))
-
+            if self.show_map:
+                self.draw_tower_multipliers(self.game_surface, self.archer_tower_upg, "archer_tower")
+                self.draw_tower_multipliers(self.game_surface, self.stone_tower_upg, "stone_tower")
+                self.draw_tower_multipliers(self.game_surface, self.sling_shot_tower_upg, "slingshot_tower")
+                self.draw_tower_multipliers(self.game_surface, self.bomb_tower_upg, "bomb_tower")
             # Draw tower menu with name and price
             
+            # optional refactoring (put all draw method in this function) #FIXME
+            if self.inGame:
+                if self.wave_director.wave_state != "idle":
+                
+                    header = self.wave_director.wave_header_surf.copy()
+                    path   = self.wave_director.wave_path_surf.copy()
+                    enemy  = self.wave_director.wave_enemy_surf.copy()
+        
+                    alpha = self.wave_director.wave_announce_alpha
+        
+                    header.set_alpha(alpha)
+                    path.set_alpha(alpha)
+                    enemy.set_alpha(alpha)
+        
+                    self.screen.blit(header, self.wave_director.wave_header_pos)
+                    self.screen.blit(path,   self.wave_director.wave_path_pos)
+                    self.screen.blit(enemy,  self.wave_director.wave_enemy_pos)
             # Scale game surface to window
             scaled_surface = pygame.transform.smoothscale(self.game_surface, (window_w, window_h))
             self.screen.fill("black")
