@@ -889,6 +889,23 @@ class TowerDefense:
 
         ui.image = ui.base_image
 
+    def draw(self):
+        if self.inGame:
+            if self.wave_director.wave_state != "idle":
+            
+                header = self.wave_director.wave_header_surf.copy()
+                path   = self.wave_director.wave_path_surf.copy()
+                enemy  = self.wave_director.wave_enemy_surf.copy()
+    
+                alpha = self.wave_director.wave_announce_alpha
+    
+                header.set_alpha(alpha)
+                path.set_alpha(alpha)
+                enemy.set_alpha(alpha)
+    
+                self.screen.blit(header, self.wave_director.wave_header_pos)
+                self.screen.blit(path,   self.wave_director.wave_path_pos)
+                self.screen.blit(enemy,  self.wave_director.wave_enemy_pos)
     # -----------------------------------------------
     # Main game loop
     # -----------------------------------------------
@@ -1333,22 +1350,8 @@ class TowerDefense:
             # Draw tower menu with name and price
             
             # optional refactoring (put all draw method in this function) #FIXME
-            if self.inGame:
-                if self.wave_director.wave_state != "idle":
-                
-                    header = self.wave_director.wave_header_surf.copy()
-                    path   = self.wave_director.wave_path_surf.copy()
-                    enemy  = self.wave_director.wave_enemy_surf.copy()
-        
-                    alpha = self.wave_director.wave_announce_alpha
-        
-                    header.set_alpha(alpha)
-                    path.set_alpha(alpha)
-                    enemy.set_alpha(alpha)
-        
-                    self.screen.blit(header, self.wave_director.wave_header_pos)
-                    self.screen.blit(path,   self.wave_director.wave_path_pos)
-                    self.screen.blit(enemy,  self.wave_director.wave_enemy_pos)
+            self.draw()
+
             # Scale game surface to window
             scaled_surface = pygame.transform.smoothscale(self.game_surface, (window_w, window_h))
             self.screen.fill("black")
