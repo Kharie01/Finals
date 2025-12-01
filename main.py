@@ -208,6 +208,8 @@ class TowerDefense:
             icon = pygame.transform.scale(self.load_image("assets/images/mapscreen/" + tdata["icon"]), (slot_w, slot_h))
             build_frames = [self.load_image(f"{folder}/{img}") for img in tdata["build"]]
             upgrade_frames = [self.load_image(f"{folder}/{img}") for img in tdata["upgrades"]]
+            weapon_frames = [self.load_image(f"{folder}/{img}") 
+                 for img in tdata.get("weapon", [])]
             projectile = self.load_image("assets/data/graphics/" + tdata["projectile"])
 
             self.tower_menu.append({
@@ -224,6 +226,7 @@ class TowerDefense:
                 "projectile_image": projectile,
                 "projectile_speed": tdata["projectile_speed"],
                 "size": tuple(tdata["size"]),
+                "weapon_frames": weapon_frames,
                 "sound": tdata.get("sound")  # ✅ add sound path from JSON
             })
 
@@ -852,7 +855,7 @@ class TowerDefense:
         panel_h = 125
         panel_y = self.GAME_HEIGHT - panel_h - 0
         panel_w = 380
-        panel_x = self.GAME_WIDTH - panel_w - 20
+        panel_x = self.GAME_WIDTH - panel_w - 0
 
         pygame.draw.rect(surface, (60,40,30),
                         (panel_x, panel_y, panel_w, panel_h), border_radius=12)
@@ -1206,6 +1209,7 @@ class TowerDefense:
                                 [tower_btn["idle"]],
                                 tower_btn["building_frames"],
                                 tower_btn["upgrade_images"],
+                                weapon_frames=tower_btn.get("weapon_frames", []),
                                 damage=tower_btn.get("damage", 10),
                                 range_=tower_btn.get("range", 100),
                                 fire_rate=tower_btn.get("fire_rate", 1.0),
@@ -1516,7 +1520,11 @@ class TowerDefense:
 
             if self.inGame:
                 self.all_sprites.set_target_surface(self.game_surface)
-                self.all_sprites.draw()
+                for sprite in self.all_sprites:
+                    if isinstance(sprite, Tower):
+                        sprite.draw(self.game_surface)
+                    else:
+                        self.game_surface.blit(sprite.image, sprite.rect)
 
                 # Draw right-side HUD (castle HP, money, wave, time)
                 self.draw_right_hud(self.game_surface)
