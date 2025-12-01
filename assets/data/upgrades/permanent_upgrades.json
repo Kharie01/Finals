@@ -1,6 +1,6 @@
 {
     "archer_tower": {
-        "damage_mult": 3.0000000000000018,
+        "damage_mult": 5.699999999999997,
         "range_mult": 2.0,
         "fire_rate_mult": 0.75,
         "projectile_speed_mult": 1.75

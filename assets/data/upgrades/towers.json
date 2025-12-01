@@ -2,9 +2,11 @@
     "Archer Tower": {
         "folder": "tower/archer",
         "idle": "archer1.png",
+
         "icon": "upgrades/archer.png",
         "build": ["building1.png", "archer1.png"],
         "upgrades": ["archer1.png", "archer2.png", "archer3.png"],
+
         "projectile": "projectiles/arrow.png",
         "damage": 15,
         "range": 120,
@@ -17,9 +19,11 @@
     "Stone Tower": {
         "folder": "tower/stone",
         "idle": "3.png",
+
         "icon": "upgrades/stone.png",
         "build": ["5.png", "3.png"],
         "upgrades": ["3.png", "6.png", "7.png"],
+
         "projectile": "projectiles/stone.png",
         "damage": 25,
         "range": 180,
@@ -32,9 +36,18 @@
     "Slingshot": {
         "folder": "tower/slingshot",
         "idle": "slingshot1.png",
+
+        "weapon": [
+            "weapon1.png",
+            "weapon2.png",
+            "weapon3.png",
+            "weapon4.png"
+        ],
+
         "icon": "upgrades/slingshot.png",
         "build": ["progressSlingShot1.png", "slingshot1.png"],
         "upgrades": ["slingshot1.png", "slingshot2.png", "slingshot3.png"],
+
         "projectile": "projectiles/slingshot.png",
         "damage": 10,
         "range": 150,
@@ -47,9 +60,18 @@
     "Bomb Tower": {
         "folder": "tower/bomb",
         "idle": "bombtower1.png",
+
+        "weapon": [
+            "weapon1.png",
+            "weapon2.png",
+            "weapon3.png",
+            "weapon4.png"
+        ],
+
         "icon": "upgrades/bomb.png",
         "build": ["progressBomb1.png", "bombtower1.png"],
         "upgrades": ["bombtower1.png", "bombtower2.png", "bombtower3.png"],
+
         "projectile": "projectiles/bomb.png",
         "damage": 40,
         "range": 80,

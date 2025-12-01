@@ -76,9 +76,9 @@ ENEMY_TYPES = {
         "anim": None
     },
     "tank": {
-        "speed": 1.00,
-        "hp": 300,
-        "damage": 30,
+        "speed": 0.5,
+        "hp": 500,
+        "damage": 35,
         "flying": False,
         "size": (90, 90),
         "anim": None
@@ -86,15 +86,15 @@ ENEMY_TYPES = {
     "flying": {
         "speed": 2.43,
         "hp": 45,
-        "damage": 8,
+        "damage": 10,
         "flying": True,
         "size": (60, 60),
         "anim": None
     },
     "swarm": {
         "speed": 1.95,
-        "hp": 20,
-        "damage": 3,
+        "hp": 5,
+        "damage": 5,
         "flying": False,
         "size": (32, 32),
         "anim": None

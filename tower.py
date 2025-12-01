@@ -4,7 +4,7 @@ class Tower(pygame.sprite.Sprite):
     def __init__(self, pos, idle_frames, building_frames, upgrade_frames,
                 damage=10, range_=100, fire_rate=1.0,
                 projectile_image=None, projectile_speed=300, size=(64, 64),
-                money_system=None, tower_type=None,sound_path=None):
+                money_system=None, tower_type=None,weapon_frames=None,sound_path=None):
 
         super().__init__()
         MAX_LEVEL = 3
@@ -34,6 +34,7 @@ class Tower(pygame.sprite.Sprite):
         self.projectile_speed = projectile_speed
         self.projectiles = pygame.sprite.Group()
         self.last_shot = 0
+        self.weapon_animating = False
 
         # --- Apply permanent upgrades (global stat boosts) ---
         self.tower_type = tower_type
@@ -60,9 +61,26 @@ class Tower(pygame.sprite.Sprite):
         else:
             self.shoot_sound = None
 
+        self.weapon_frames = [pygame.transform.scale(img, size) for img in weapon_frames] \
+            if weapon_frames else []
+        
+        self.weapon_frame = 0
+        self.weapon_anim_time = 0
+        self.weapon_anim_speed = 0.07  # speed of attack animation
+        self.weapon_image = self.weapon_frames[0] if self.weapon_frames else None
+        
+        if self.weapon_frames:
+            self.weapon_image = self.weapon_frames[0]
+            self.weapon_rect = self.weapon_image.get_rect(center=self.rect.center)
+        else:
+            self.weapon_image = None
+            self.weapon_rect = None
 
         self.shot_cooldown = 1.0 / self.fire_rate      # seconds per shot
         self.shot_timer = 0.0
+
+        self.weapon_offset = (0, -10)  # adjust y to lift weapon above tower
+
 
     # -----------------------------
     # Update per frame
@@ -70,7 +88,32 @@ class Tower(pygame.sprite.Sprite):
     def update(self, dt, monsters=None, all_sprites=None):
         self._update_animation(dt)
         self._attack(monsters, all_sprites, dt)
+        # advance projectile group
         self.projectiles.update(dt)
+
+        # advance weapon animation if active
+        # ONLY animate weapon if it's actually attacking
+        if self.weapon_animating and self.weapon_frames:
+            self.weapon_anim_time += dt
+            if self.weapon_anim_time >= self.weapon_anim_speed:
+                self.weapon_anim_time = 0
+                self.weapon_frame += 1
+
+                # If reached end of animation → stop animation
+                if self.weapon_frame >= len(self.weapon_frames):
+                    self.weapon_animating = False
+                    self.weapon_frame = 0
+                    self.weapon_image = self.weapon_frames[0]  # back to idle
+                else:
+                    # Change to next frame
+                    base = self.weapon_frames[self.weapon_frame]
+                    self.weapon_image = base
+
+                # Recalculate weapon_rect
+                ox, oy = self.weapon_offset
+                self.weapon_rect = self.weapon_image.get_rect(
+                    center=(self.rect.centerx + ox, self.rect.centery + oy)
+        )
 
     # -----------------------------
     # Animation handler
@@ -126,29 +169,80 @@ class Tower(pygame.sprite.Sprite):
     # Attack Logic
     # -----------------------------
     def _attack(self, monsters, all_sprites, dt):
+
+        # Do nothing if no enemies or tower still building
         if not monsters or self.state == "building":
             return
-        
+
+        # Get the closest or nearest target
         target = self.get_target(monsters)
-        if target:
-            self.shot_timer += dt
+        if not target:
+            return
 
-            if self.shot_timer >= self.shot_cooldown:
-                self.shot_timer = 0
+        # Rotate weapon TOWARD target (but do not animate)
+        self.rotate_weapon_toward(target)
 
-                from projectile import Projectile
-                proj = Projectile(
-                    self.rect.center,
-                    target,
-                    self.damage,
-                    self.projectile_image,
-                    self.projectile_speed,
-                    self.projectiles
-                )
-                if all_sprites:
-                    all_sprites.add(proj)
-                if self.shoot_sound:
-                    self.shoot_sound.play()
+        # Handle cooldown timer
+        self.shot_timer += dt
+
+        # If not ready to shoot, exit
+        if self.shot_timer < self.shot_cooldown:
+            return
+
+        # READY TO FIRE : reset cooldown
+        self.shot_timer = 0
+
+        # --- Trigger weapon animation ONLY when firing ---
+        if self.weapon_frames:
+            self.weapon_animating = True
+            self.weapon_frame = 0
+            self.weapon_anim_time = 0
+            self.weapon_image = self.weapon_frames[0]
+
+        # ---- FIRE PROJECTILE ----
+        from projectile import Projectile
+        proj = Projectile(
+            self.rect.center,
+            target,
+            self.damage,
+            self.projectile_image,
+            self.projectile_speed,
+            self.projectiles
+        )
+
+        if all_sprites:
+            all_sprites.add(proj)
+
+        if self.shoot_sound:
+            self.shoot_sound.play()
+
+    def rotate_weapon_toward(self, target):
+        if not self.weapon_frames or not self.weapon_image:
+            return
+
+        dx = target.rect.centerx - self.rect.centerx
+        dy = target.rect.centery - self.rect.centery
+
+        # compute angle - choose sign that looks correct (may require invert)
+        angle = -pygame.math.Vector2(dx, dy).angle_to((1, 0))
+
+        base = self.weapon_frames[self.weapon_frame]
+        rotated = pygame.transform.rotate(base, angle)
+        self.weapon_image = rotated
+
+        ox, oy = getattr(self, "weapon_offset", (0, -10))
+        self.weapon_rect = self.weapon_image.get_rect(center=(self.rect.centerx + ox,
+                                                              self.rect.centery + oy))
+
+    def play_weapon_attack_animation(self):
+        # restart animation; it will advance in update()
+        self.weapon_frame = 0
+        self.weapon_anim_time = 0.0
+        if self.weapon_frames:
+            self.weapon_image = self.weapon_frames[0]
+            ox, oy = getattr(self, "weapon_offset", (0, -10))
+            self.weapon_rect = self.weapon_image.get_rect(center=(self.rect.centerx + ox,
+                                                                  self.rect.centery + oy))
     
     def on_monster_killed(self):
         if self.money_system:
@@ -215,3 +309,35 @@ class Tower(pygame.sprite.Sprite):
         self.upgrade_button = pygame.Rect(self.rect.right + 10, self.rect.top + 40, 50, 30)
         pygame.draw.rect(surface, (255, 0, 0), self.delete_button)
         pygame.draw.rect(surface, (0, 255, 0), self.upgrade_button)
+    
+    def draw(self, surface):
+        # draw tower base
+        surface.blit(self.image, self.rect)
+
+        # draw weapon above tower (if exists)
+        if self.weapon_image and self.weapon_rect:
+            surface.blit(self.weapon_image, self.weapon_rect)
+
+        # optionally draw projectiles (if they are not automatically in all_sprites)
+        for p in self.projectiles:
+            try:
+                surface.blit(p.image, p.rect)
+            except Exception:
+                pass
+
+    def _set_image_preserve_center(self, new_image):
+        """Set new self.image but keep the same center to avoid jumps."""
+        try:
+            prev_center = self.rect.center
+        except Exception:
+            prev_center = (0, 0)
+        self.image = new_image
+        self.rect = self.image.get_rect(center=prev_center)
+
+        # Re-anchor weapon relative to the new rect center
+        if self.weapon_image:
+            ox, oy = getattr(self, "weapon_offset", (0, -10))
+            self.weapon_rect = self.weapon_image.get_rect(center=(self.rect.centerx + ox,
+                                                                  self.rect.centery + oy))
+
+
