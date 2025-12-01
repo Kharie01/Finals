@@ -3,15 +3,23 @@ from enemy import ENEMY_TYPES
 import time
 
 class Monster(pygame.sprite.Sprite):
-    def __init__(self, enemy_type, waypoints, group, money_system=None):
+    def __init__(self, enemy_type, waypoints, group, wave_number, money_system=None):
         super().__init__(group)
 
         data = ENEMY_TYPES[enemy_type]
 
         # Stats
         self.speed = data["speed"]
-        self.max_hp = data["hp"]
+        base_hp = data["hp"]
+
+        growth_rate = 1.12  # tweak difficulty here!
+        self.max_hp = min(
+                int(base_hp * (growth_rate ** wave_number)),
+                50000  # max HP cap
+            )
+
         self.hp = self.max_hp
+
         self.damage = data["damage"]
         self.flying = data["flying"]
 

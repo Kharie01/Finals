@@ -114,6 +114,10 @@ class UserInterface(pygame.sprite.Sprite):
             self.target_pos = pygame.math.Vector2(self.game_width // 2 + 450, self.game_height // 2 - 50)
         elif self.name == "pText":
             self.target_pos = pygame.math.Vector2(self.game_width // 2, self.game_height //2)
+        elif self.name == "gameover":
+            self.target_pos = pygame.math.Vector2(self.game_width // 2, self.game_height // 2 - 100)
+        elif self.name == "quit":
+            self.target_pos = pygame.math.Vector2(150, self.game_height - 60)
         else:
             self.target_pos = None
 
@@ -159,6 +163,10 @@ class UserInterface(pygame.sprite.Sprite):
             self.target_pos = pygame.math.Vector2(-self.game_width // 2 + 300, 150)
         elif self.name == "pText":
             self.target_pos = pygame.math.Vector2(self.game_width // 2, -self.game_height //2)
+        elif self.name == "gameover":
+            self.target_pos = pygame.math.Vector2(self.game_width // 2, -self.game_height // 2 - 100)
+        elif self.name == "quit":
+            self.target_pos = pygame.math.Vector2(-self.game_width, self.game_height - 60)
         else:
             self.target_pos = None
     

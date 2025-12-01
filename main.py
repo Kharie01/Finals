@@ -2,7 +2,6 @@ import os
 # Must be set BEFORE pygame.init()
 os.environ["SDL_VIDEO_CENTERED"] = "1"
 os.environ["SDL_VIDEO_WINDOW_POS"] = "center"
-import random
 from settings import *
 from sprites import *
 from monsters import Monster
@@ -11,6 +10,7 @@ from user_interface import UserInterface, Dropdown
 from slider import Slider
 from tower import Tower # import Tower class
 from game_ai import ENEMY_TYPES, WaveDirector
+from expSystem import ExperienceSystem
 
 from pytmx.util_pygame import load_pygame
 
@@ -34,6 +34,14 @@ class TowerDefense:
         self.fullscreen = False
         self.time_scale = 1.0
         self.fast_forward = False
+        self.exp_system = ExperienceSystem()
+        self.upgrade_cost = {
+                "archer_tower": 1,
+                "stone_tower": 1,
+                "slingshot_tower": 1,
+                "bomb_tower": 1
+            }  # each tower upgrade costs 1 stat point
+
 
         if self.fullscreen:
             self.screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
@@ -80,12 +88,17 @@ class TowerDefense:
         self.paused = False
         self.inGame = False
         self.settings_ui_created = False
+        self.game_over = False
+        self.show_upgrades = False
+        self.base_exp = 25
+        self.exp_multiplier = 1.15
 
         # Sounds
         self.button_sfx = pygame.mixer.Sound(join('assets', 'audio', 'sfx', 'button-click.wav'))
         self.start_bgmusic = pygame.mixer.Sound(join('assets', 'audio', 'bgm', 'start_bgm.wav'))
         self.game_bgmusic = pygame.mixer.Sound(join('assets', 'audio', 'bgm', 'game_bgm.wav'))
         self.hover_sfx = pygame.mixer.Sound(join('assets', 'audio', 'sfx', 'mouse-hover.wav'))
+        self.gameover_sfx = pygame.mixer.Sound(join('assets', 'audio', 'sfx', 'gameover.wav'))
 
         # Load UI images
         self.startscreen_images = {
@@ -94,7 +107,8 @@ class TowerDefense:
             "play": pygame.image.load(join('assets', 'images', 'startscreen', 'play.png')).convert_alpha(),
             "setting": pygame.image.load(join('assets', 'images', 'startscreen', 'settings.png')).convert_alpha(),
             "exit": pygame.image.load(join('assets', 'images', 'startscreen', 'exit.png')).convert_alpha(),
-            "paused": pygame.image.load(join('assets', 'images', 'startscreen', 'paused.png')).convert_alpha()
+            "paused": pygame.image.load(join('assets', 'images', 'startscreen', 'paused.png')).convert_alpha(),
+            "gameover": pygame.image.load(join('assets', 'images', 'startscreen', 'game_over.png')).convert_alpha()
             }
         self.map_selection_images = {
             "map": pygame.image.load(join('assets', 'images', 'mapscreen', 'map.png')).convert_alpha(),
@@ -129,6 +143,7 @@ class TowerDefense:
         # font loader
         self.small   = pygame.font.Font("assets/Monocraft.ttc", 12)
         self.title_f = pygame.font.Font("assets/Monocraft.ttc", 14)
+        self.title = pygame.font.Font("assets/Monocraft.ttc", 32)
 
         self.multiplier_labels = {
             "title": self.title_f.render("ACTIVE MULTIPLIERS:", True, (255,255,255)),
@@ -291,6 +306,8 @@ class TowerDefense:
     # Start screen UI
     # -----------------------------------------------
     def start_screen(self):
+        if not hasattr(self, "settings_ui_created"):
+            self.settings_ui_created = False
         self.show_start = True
         if not hasattr(self, "start_screen_bg"):
             self.start_screen_bg = UserInterface("startscreen", (0, 0), self.startscreen_images["start"], (self.GAME_WIDTH, self.GAME_HEIGHT), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, None)
@@ -321,10 +338,11 @@ class TowerDefense:
             self.settings_ui_display = UserInterface("ui_display", (-self.GAME_WIDTH, 150), self.settings_images["display"], (254, 68), self.settings_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
             self.settings_ui_music = UserInterface("ui_music", (-self.GAME_WIDTH, 570), self.settings_images["music"], (200, 65), self.settings_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
             self.settings_ui_sfx = UserInterface("ui_sfx", (-self.GAME_WIDTH, 670), self.settings_images["sfx"], (150, 65), self.settings_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
+            self.quit = UserInterface("quit", (-self.GAME_WIDTH, 670), self.startscreen_images["exit"], (139, 58), self.settings_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
 
             self.slider_music = Slider("slider_music", (-self.GAME_WIDTH // 2 + 300, 470), bar_surface=self.slider_images["bar"], bar_scale=(600, 40), handle_surface=self.slider_images["handle"], handle_scale=(45, 45), ui_group=self.settings_sprites, min_value=0, max_value=100, default_value=50, game_width=self.GAME_WIDTH, game_height=self.GAME_HEIGHT, hover_sfx=self.hover_sfx)
             self.slider_sfx = Slider("slider_sfx", (-self.GAME_WIDTH // 2 + 300, 570), bar_surface=self.slider_images["bar"], bar_scale=(600, 40), handle_surface=self.slider_images["handle"], handle_scale=(45, 45), ui_group=self.settings_sprites, min_value=0, max_value=100, default_value=50, game_width=self.GAME_WIDTH, game_height=self.GAME_HEIGHT, hover_sfx=self.hover_sfx)
-
+             
             self.settings = self.load_display_settings()
             self.current_resolution = self.settings["resolution"]
 
@@ -438,6 +456,18 @@ class TowerDefense:
         if tower_name not in self.permanent_upgrades:
             return
 
+        cost = self.upgrade_cost.get(tower_name, 1)
+
+        # --- REQUIRE STAT POINTS ONLY FOR UPGRADE ---
+        if action == "upgrade":
+            if self.exp_system.stat_points < cost:
+                print("[UPGRADE] Not enough stat points!")
+                return
+            else:
+                self.exp_system.stat_points -= cost
+                print(f"[UPGRADE] {tower_name} upgraded! SP left: {self.exp_system.stat_points}")
+                
+
         # Define stat changes
         UPGRADE = {
             "damage_mult": 0.10,
@@ -455,6 +485,12 @@ class TowerDefense:
 
         if action == "upgrade":
             vals = UPGRADE
+            if self.exp_system.stat_points < cost:
+                print("[UPGRADE] Not enough stat points!")
+                return
+
+            self.exp_system.stat_points -= cost
+            self.exp_system.save_progress()
         elif action == "downgrade":
             vals = DOWNGRADE
         else:
@@ -480,6 +516,7 @@ class TowerDefense:
 
         # Animated rect position (follows movement)
         small = self.small
+        title = self.title_f
 
         x = parent_ui.rect.x
         y = parent_ui.rect.y
@@ -526,6 +563,10 @@ class TowerDefense:
         surface.blit(draw_value(stats["projectile_speed_mult"], limit=1.75),
                     (xpos + 165, ypos))
 
+        if self.show_upgrades:
+            sp_text = self.title.render(f"Stat Points: {self.exp_system.stat_points}", True, (255, 255, 255))
+            surface.blit(sp_text, (self.GAME_WIDTH//2 - 100, 60))
+
     # -----------------------------------------------
     # Setup map, sprites, castles, monsters
     # -----------------------------------------------
@@ -550,11 +591,12 @@ class TowerDefense:
         castle_layer = tmx_data.get_layer_by_name("castle")
         for obj in castle_layer:
             if hasattr(obj, "image") and obj.image is not None:
-                castle = CastleBox((obj.x, obj.y), obj.width, obj.height, self.all_sprites, image=obj.image)
+                castle = CastleBox((obj.x, obj.y), obj.width, obj.height, self.all_sprites, image=obj.image, game=self)
                 self.all_sprites.add(castle)
                 self.castles.add(castle)
                 if obj.properties.get("hp_castle", False):
                     castle.has_hp = True
+
 
         # Other layers
         for layer_name in ["House", "decoration", "fences"]:
@@ -577,7 +619,7 @@ class TowerDefense:
         self.path_rects = [pygame.Rect(x, y, TILE_SIZE, TILE_SIZE) for x, y in self.waypoints]
         self.create_middle_hud_icons()
 
-    def spawn_enemy(self, enemy_type, waypoints):
+    def spawn_enemy(self, enemy_type, waypoints, wave_number):
         """Spawns a monster based on its type with correct sprite and stats."""
 
         # Get stats for this enemy type
@@ -588,14 +630,16 @@ class TowerDefense:
             enemy_type=enemy_type,
             waypoints=waypoints,
             group=self.all_sprites,
+            wave_number=wave_number,
             money_system=self.money_system  # <-- pass money system here
         )
 
-        # Assign extra attributes
-        monster.hp = stats["hp"]
-        monster.max_hp = stats["hp"]
-        monster.flying = stats.get("flying", False)
-        monster.type = enemy_type
+        #debugger
+        #base_hp = ENEMY_TYPES[enemy_type]["hp"]
+        #print(
+        #    f"DEBUG -> {enemy_type}: base={base_hp}, scaled={monster.hp}, "
+        #    f"wave={wave_number}, growth_rate used={self.growth_rate if hasattr(self,'growth_rate') else 'internal'}"
+        #)
 
         # Add to monster group
         self.monsters.add(monster)
@@ -882,7 +926,7 @@ class TowerDefense:
         # Scale icons to the UI size
         self.pause_icon_scaled    = pygame.transform.scale(self.game_icons["pause"], ui.base_size)
         self.unpause_icon_scaled  = pygame.transform.scale(self.game_icons["unpause"], ui.base_size)
-
+                
         if self.paused:
             ui.base_image = self.unpause_icon_scaled
             self.pause_text.move_to()
@@ -892,29 +936,214 @@ class TowerDefense:
 
         ui.image = ui.base_image
 
-    def draw(self):
-        if self.inGame:
-            if self.wave_director.wave_state != "idle":
-            
-                header = self.wave_director.wave_header_surf.copy()
-                path   = self.wave_director.wave_path_surf.copy()
-                enemy  = self.wave_director.wave_enemy_surf.copy()
+    def trigger_game_over(self):
+
+        self.game_over = True
+        self.paused = True # freeze gameplay
+
+        wave_count = self.wave_director.ai.wave_number - 1  
+
+            # Your EXP formula inputs
+        base_exp = self.base_exp            # you define this
+        multiplier = self.exp_multiplier    # you define this
     
-                alpha = self.wave_director.wave_announce_alpha
-    
-                header.set_alpha(alpha)
-                path.set_alpha(alpha)
-                enemy.set_alpha(alpha)
-    
-                self.screen.blit(header, self.wave_director.wave_header_pos)
-                self.screen.blit(path,   self.wave_director.wave_path_pos)
-                self.screen.blit(enemy,  self.wave_director.wave_enemy_pos)
+        gained_exp = self.exp_system.grant_wave_exp(
+            base_exp=base_exp,
+            wave_count=wave_count,
+            multiplier=multiplier
+        )
+
+
+        # Create UI element off-screen with slide animation
+        self.gameover_ui = UserInterface(
+            "gameover",
+            pos=(self.GAME_WIDTH // 2, -300),  # start off-screen (top)
+            surface=self.startscreen_images["gameover"],
+            scale=(600, 150),  # or whatever size fits your image
+            group=self.ui_sprites,
+            game_width=self.GAME_WIDTH,
+            game_height=self.GAME_HEIGHT,
+            hover_sfx=None
+        )
+
+        font = pygame.font.Font("assets/Monocraft.ttc", 50)  # choose your font/size
+        exp_text_str = f"EXP GAINED: {gained_exp}"
+
+        self.exp_text_surface = font.render(exp_text_str, True, (255, 215, 0))  # gold yellow
+        self.exp_text_rect = self.exp_text_surface.get_rect()
+
+        # Position: centered horizontally, below the Game Over UI
+        self.exp_text_rect.centerx = self.GAME_WIDTH // 2
+        self.exp_text_rect.top = self.gameover_ui.rect.bottom + 20
+
+        self.gameover_ui.move_to()
+        self.gameover_sfx.play()
+        print("GAME OVER")
+
+    def reset_game(self):
+        """Full game reset: clears gameplay state and returns to start screen."""
+        print("RESETTING GAME...")
+
+        # --- Reset flags ---
+        self.game_over = False
+        self.inGame = False
+        self.paused = False
+        self.fast_forward = False
+        self.time_scale = 1.0
+        self.main_castle = None
+
+        # --- Clear all sprite groups ---
+        self.all_sprites.empty()
+        self.ui_sprites.empty()
+        self.settings_sprites.empty()
+        self.castles.empty()
+        self.monsters.empty()
+
+        # --- Clear tower-related data ---
+        self.placed_towers.clear()
+        self.selected_tower = None
+        self.dragging_tower = None
+
+        ATTRS_TO_DELETE = [
+            "start_screen_bg",
+            "cloud",
+            "logo",
+            "settings_ui_surface",
+            "settings_ui_back_btn",
+            "settings_ui_display",
+            "settings_ui_music",
+            "settings_ui_sfx",
+            "slider_music",
+            "slider_sfx",
+            "resolution_dropdown",
+            "settings_ui_created",
+        ]
+
+        for attr in ATTRS_TO_DELETE:
+            if hasattr(self, attr):
+                delattr(self, attr)
+
+        # --- Map & upgrade UI UI objects should be rebuilt ---
+        for attr in [
+            "map_button", "upgrades_button", "back_button",
+            "map_ui_surface", "map_ui_back_btn", "map_ui_play_btn",
+            "map_ui_map_1", "map_ui_map_2",
+            "archer_tower_upg", "stone_tower_upg",
+            "sling_shot_tower_upg", "bomb_tower_upg",
+        ]:
+            if hasattr(self, attr):
+                delattr(self, attr)
+
+
+        # --- Stop game BGM & restart start screen BGM ---
+        self.game_bgmusic.stop()
+        self.start_bgmusic.play(loops=-1)
+
+        # --- Restore start UI ---
+        self.start_ui.clear()
+        self.map_ui.clear()
+        self.map_selection_ui.clear()
+        self.upgrade_ui.clear()
+
+        self.start_screen()
+
+    def confirmation(self, message="Are you sure?"):
+        """
+        HUD-styled confirmation dialog.
+        ESC = cancel, SPACE = confirm.
+        Blocks the game until the user decides.
+        Returns True (confirm) or False (cancel)
+        """
+
+        # ----------- Colors (from your HUD screenshot) -----------
+        PANEL_BG     = (71, 42, 26)
+        PANEL_BORDER = (44, 28, 19)
+        PANEL_SHADOW = (0, 0, 0, 120)
+
+        # ----------- Fonts -----------
+        title_font = pygame.font.Font("assets/Monocraft-Bold.ttf", 32)
+        sub_font   = pygame.font.Font("assets/Monocraft-Bold.ttf", 20)
+
+        # ----------- Render text -----------
+        title_surf = title_font.render(message, True, (255, 255, 255))
+        esc_surf   = sub_font.render("Press ESC to cancel", True, (255, 180, 180))
+        space_surf = sub_font.render("Press SPACE to confirm", True, (180, 255, 180))
+
+        # ----------- Box sizing -----------
+        padding = 40
+        spacing = 20
+
+        max_w = max(title_surf.get_width(), esc_surf.get_width(), space_surf.get_width())
+        total_h = (
+            title_surf.get_height() +
+            esc_surf.get_height() +
+            space_surf.get_height() +
+            spacing * 2
+        )
+
+        box_w = max_w + padding * 2
+        box_h = total_h + padding * 2
+
+        box_x = (self.GAME_WIDTH - box_w) // 2
+        box_y = (self.GAME_HEIGHT - box_h) // 2
+        box_rect = pygame.Rect(box_x, box_y, box_w, box_h)
+
+        # ----------- Modal loop (blocks until space/esc) -----------
+        clock = pygame.time.Clock()
+
+        while True:
+            dt = clock.tick(60)
+
+            # Handle events specifically for this dialog
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    quit()
+
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        return False
+                    if event.key == pygame.K_SPACE:
+                        return True
+
+            # ----------- Darken background -----------
+            dark = pygame.Surface((self.GAME_WIDTH, self.GAME_HEIGHT), pygame.SRCALPHA)
+            dark.fill((0, 0, 0, 160))
+            self.game_surface.blit(dark, (0, 0))
+
+            # ----------- Draw shadow -----------
+            shadow = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
+            shadow.fill(PANEL_SHADOW)
+            self.game_surface.blit(shadow, (box_x, box_y + 4))
+
+            # ----------- Draw Panel -----------
+            pygame.draw.rect(self.game_surface, PANEL_BG, box_rect, border_radius=12)
+            pygame.draw.rect(self.game_surface, PANEL_BORDER, box_rect, 3, border_radius=12)
+
+            # ----------- Draw Text (centered) -----------
+            cx = box_rect.centerx
+            y = box_rect.y + padding
+
+            self.game_surface.blit(title_surf, (cx - title_surf.get_width() // 2, y))
+            y += title_surf.get_height() + spacing
+
+            self.game_surface.blit(esc_surf, (cx - esc_surf.get_width() // 2, y))
+            y += esc_surf.get_height() + spacing
+
+            self.game_surface.blit(space_surf, (cx - space_surf.get_width() // 2, y))
+
+            # ----------- Apply scaling before showing ----------- 
+            window_w, window_h = self.screen.get_size()
+            scaled = pygame.transform.smoothscale(self.game_surface, (window_w, window_h))
+            self.screen.blit(scaled, (0, 0))
+            pygame.display.update()
+
     # -----------------------------------------------
     # Main game loop
     # -----------------------------------------------
     def run(self):
         while self.running:
-            dt = (self.clock.tick() / 1000) * self.time_scale
+            dt = (self.clock.tick(60) / 1000) * self.time_scale
             window_w, window_h = self.screen.get_size()
             scale_x = window_w / self.GAME_WIDTH
             scale_y = window_h / self.GAME_HEIGHT
@@ -939,11 +1168,16 @@ class TowerDefense:
                         else:
                             self.screen = pygame.display.set_mode((window_w, window_h), pygame.RESIZABLE)
                     
+                    if self.game_over:
+                        self.reset_game()
+                        continue
+                    
                     if event.key == pygame.K_SPACE:
                         self.wave_director.force_next_wave = True
                     
                     if event.key == pygame.K_ESCAPE:
                         self.toggle_pause(self.hud_icons["pause_toggle"])
+                        
 
                 elif event.type == pygame.VIDEORESIZE and not self.fullscreen:
                     self.screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
@@ -984,8 +1218,10 @@ class TowerDefense:
                                 size=tower_btn.get("size", (64, 64)),
                                 money_system=self.money_system,  # pass reference
                                 tower_type=tower_btn["name"].lower().replace(" ", "_"),
-                                sound_path=tower_btn.get("sound")
+                                sound_path=tower_btn.get("sound"),
+                                sfx_volume=self.slider_sfx.get_value() / 100
                             )
+                            
                                 break
 
                         # 3️⃣ Check placed towers for selection / upgrade / delete
@@ -1048,17 +1284,13 @@ class TowerDefense:
 
                                     if self.inGame:
                                         self.paused = not self.paused
-                                    if self.show_start:
-                                        for elem in self.start_ui:
+                                        self.quit.move_to()
+                                    for elem in self.settings_ui:
+                                        if elem.name not in ("quit"):
                                             try:
-                                                elem.move_away()
+                                                elem.move_to()
                                             except Exception:
                                                 pass
-                                    for elem in self.settings_ui:
-                                        try:
-                                            elem.move_to()
-                                        except Exception:
-                                            pass
                                     try:
                                         self.slider_music.bar.move_to()
                                         self.slider_music.handle.move_to()
@@ -1070,20 +1302,22 @@ class TowerDefense:
                                         self.resolution_dropdown.move_to()
                                     except Exception:
                                         pass
-                                elif ui.name == "play_back_btn":
-                                    if self.inGame:
-                                        self.paused = not self.paused
                                     if self.show_start:
                                         for elem in self.start_ui:
                                             try:
-                                                elem.move_to()
+                                                elem.move_away()
                                             except Exception:
                                                 pass
+                                elif ui.name == "play_back_btn":
+                                    if self.inGame:
+                                        self.paused = not self.paused
+                                        self.quit.move_away()
                                     for elem in self.settings_ui:
-                                        try:
-                                            elem.move_away()
-                                        except Exception:
-                                            pass
+                                        if elem.name not in ("quit"):
+                                            try:
+                                                elem.move_away()
+                                            except Exception:
+                                                pass
                                     try:
                                         self.slider_music.bar.move_away()
                                         self.slider_music.handle.move_away()
@@ -1095,7 +1329,12 @@ class TowerDefense:
                                         self.resolution_dropdown.move_away()
                                     except Exception:
                                         pass
-
+                                    if self.show_start:
+                                        for elem in self.start_ui:
+                                            try:
+                                                elem.move_to()
+                                            except Exception:
+                                                pass
                                     self.save_settings()
                                 elif ui.name == "exit":
                                     self.running = False
@@ -1115,6 +1354,7 @@ class TowerDefense:
 
                                     self.logo.move_away()
                                 elif ui.name == "upgrades":
+                                    self.show_upgrades = True
                                     self.map_ui_surface.move_to()
                                     self.map_ui_back_btn.move_to()
                                     for elem in self.upgrade_ui:
@@ -1178,6 +1418,7 @@ class TowerDefense:
                                         self.game_bgmusic.play(loops=-1)
                                 elif ui.name == "ui_back_btn":
                                     self.map_selected = False
+                                    self.show_upgrades = False
                                     self.map_ui_play_btn.set_dimmed(True)
                                     for elem in self.map_selection_ui:
                                         try:
@@ -1203,6 +1444,9 @@ class TowerDefense:
                                     self.fast_forward = not self.fast_forward
                                     self.time_scale = 2.0 if self.fast_forward else 1.0
                                     print(self.time_scale)
+                                elif ui.name == "quit":
+                                    if self.confirmation("Quit Match?"):
+                                        self.reset_game()
 
                 elif event.type == pygame.MOUSEMOTION:
                     if self.dragging_tower:
@@ -1229,15 +1473,12 @@ class TowerDefense:
                         self.dragging_tower = None
 
             # --- Update Sprites ---
-            if self.inGame:
-                if not self.paused:
-                    self.all_sprites.update(dt)
-                    self.castles.update(dt)
-
-                    for tower in self.placed_towers:
-                        tower.update(dt, self.monsters, self.all_sprites)
-
-                    self.wave_director.update(dt, self.placed_towers)
+            if self.inGame and not self.paused and not self.game_over:
+                self.all_sprites.update(dt)
+                self.castles.update(dt)
+                for tower in self.placed_towers:
+                    tower.update(dt, self.monsters, self.all_sprites)
+                self.wave_director.update(dt, self.placed_towers)
 
             self.ui_sprites.update(dt, game_mouse)
             self.settings_sprites.update(dt,game_mouse)
@@ -1251,23 +1492,31 @@ class TowerDefense:
             self.game_bgmusic.set_volume(self.slider_music.get_value()/100)
             self.button_sfx.set_volume(self.slider_sfx.get_value()/100)
             self.hover_sfx.set_volume(self.slider_sfx.get_value()/100)
+            self.gameover_sfx.set_volume(self.slider_sfx.get_value()/100)
+
+            if self.inGame and self.dragging_tower:
+                sound = getattr(self.dragging_tower, "shoot_sound", None)
+                if sound:
+                    sound.set_volume(self.slider_sfx.get_value() / 100)
+
 
             # --- Collisions ---
-            if self.inGame:
-                if not self.paused:
-                    hits = pygame.sprite.groupcollide(self.castles, self.monsters, False, False)
-                    for castle, monsters in hits.items():
+            if self.inGame and not self.paused and not self.game_over:
+                hits = pygame.sprite.groupcollide(self.castles, self.monsters, False, False)
+                for castle, monsters in hits.items():
 
-                    # AUTO-SELECT THE CORRECT CASTLE THE FIRST TIME IT TAKES DAMAGE
-                        if self.main_castle is None:
-                            self.main_castle = castle
+                # AUTO-SELECT THE CORRECT CASTLE THE FIRST TIME IT TAKES DAMAGE
+                    if self.main_castle is None:
+                        self.main_castle = castle
 
-                        for monster in monsters:
-                            castle.take_damage(getattr(monster, "damage", 10))
-                            monster.kill()
+                    for monster in monsters:
+                        castle.take_damage(getattr(monster, "damage", 10))
+                        monster.kill()
 
             # --- Drawing ---
             self.game_surface.fill("grey")
+            if self.game_over:
+                self.game_surface.blit(self.exp_text_surface, self.exp_text_rect)
 
             if self.inGame:
                 self.all_sprites.set_target_surface(self.game_surface)
@@ -1343,6 +1592,21 @@ class TowerDefense:
                     self.game_surface.blit(price_text, (x, y + tower_btn["rect"].height + 3))
             # Draw UI
             # Always draw
+            if self.inGame:
+                header = self.wave_director.wave_header_surf.copy()
+                path   = self.wave_director.wave_path_surf.copy()
+                enemy  = self.wave_director.wave_enemy_surf.copy()
+
+                alpha = self.wave_director.wave_announce_alpha
+
+                header.set_alpha(alpha)
+                path.set_alpha(alpha)
+                enemy.set_alpha(alpha)
+
+                self.game_surface.blit(header, self.wave_director.wave_header_pos)
+                self.game_surface.blit(path,   self.wave_director.wave_path_pos)
+                self.game_surface.blit(enemy,  self.wave_director.wave_enemy_pos)
+
             self.ui_sprites.set_target_surface(self.game_surface)
             self.ui_sprites.draw()
             self.settings_sprites.set_target_surface(self.game_surface)
@@ -1358,7 +1622,6 @@ class TowerDefense:
             # Draw tower menu with name and price
             
             # optional refactoring (put all draw method in this function) #FIXME
-            self.draw()
 
             # Scale game surface to window
             scaled_surface = pygame.transform.smoothscale(self.game_surface, (window_w, window_h))
