@@ -18,6 +18,11 @@ from money import MoneySystem
 import pygame
 import json
 
+def format_time(seconds):
+    minutes = int(seconds) // 60
+    seconds = int(seconds) % 60
+    return f"{minutes:02d}:{seconds:02d}"
+
 class TowerDefense:
     """
     Main Tower Defense game class.
@@ -619,7 +624,7 @@ class TowerDefense:
         self.path_rects = [pygame.Rect(x, y, TILE_SIZE, TILE_SIZE) for x, y in self.waypoints]
         self.create_middle_hud_icons()
 
-    def spawn_enemy(self, enemy_type, waypoints, wave_number):
+    def spawn_enemy(self, enemy_type, waypoints, wave_number, wave_director):
         """Spawns a monster based on its type with correct sprite and stats."""
 
         # Get stats for this enemy type
@@ -631,7 +636,8 @@ class TowerDefense:
             waypoints=waypoints,
             group=self.all_sprites,
             wave_number=wave_number,
-            money_system=self.money_system  # <-- pass money system here
+            money_system=self.money_system,
+            wave_director = self.wave_director   # <-- pass money system here
         )
 
         #debugger
@@ -907,10 +913,8 @@ class TowerDefense:
                     (xpos, ypos))
         ypos += 18
 
-        if hasattr(self.wave_director.ai, "formatted_time"):
-            time_str = self.wave_director.ai.formatted_time
-        else:
-            time_str = "00:00"
+        remaining = self.wave_director.get_time_until_next_wave()
+        time_str = format_time(remaining)
 
         surface.blit(small.render(f"TIME  : {time_str}", True, (255,255,255)),
                     (xpos, ypos))
@@ -919,7 +923,7 @@ class TowerDefense:
         cas = getattr(self.wave_director.ai, "casualties", 0)
         surface.blit(small.render(f"KILLS : {cas}", True, (255,120,120)),
                     (xpos, ypos))
-    
+
     def toggle_pause(self, ui):
         self.paused = not self.paused
 

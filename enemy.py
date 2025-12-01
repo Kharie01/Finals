@@ -60,7 +60,7 @@ SWARM_RIGHT  = load_animation(anim_folder("swarm", "right"))
 # -----------------------------
 ENEMY_TYPES = {
     "grunt": {
-        "speed": 1.67,
+        "speed": 0.80,
         "hp": 60,
         "damage": 10,
         "flying": False,
@@ -68,7 +68,7 @@ ENEMY_TYPES = {
         "anim": None        # will be auto-filled below
     },
     "fast": {
-        "speed": 3.00,
+        "speed": 1.20,
         "hp": 40,
         "damage": 5,
         "flying": False,
@@ -76,7 +76,7 @@ ENEMY_TYPES = {
         "anim": None
     },
     "tank": {
-        "speed": 0.5,
+        "speed": 0.40,
         "hp": 500,
         "damage": 35,
         "flying": False,
@@ -84,7 +84,7 @@ ENEMY_TYPES = {
         "anim": None
     },
     "flying": {
-        "speed": 2.43,
+        "speed": 1.00,
         "hp": 45,
         "damage": 10,
         "flying": True,
@@ -92,7 +92,7 @@ ENEMY_TYPES = {
         "anim": None
     },
     "swarm": {
-        "speed": 1.95,
+        "speed": 1.30,
         "hp": 5,
         "damage": 5,
         "flying": False,

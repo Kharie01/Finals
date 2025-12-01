@@ -1,1 +1,1 @@
-delete_button
+self.time_scale

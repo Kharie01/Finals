@@ -3,11 +3,11 @@ from enemy import ENEMY_TYPES
 import time
 
 class Monster(pygame.sprite.Sprite):
-    def __init__(self, enemy_type, waypoints, group, wave_number, money_system=None):
+    def __init__(self, enemy_type, waypoints, group, wave_number, wave_director, money_system=None):
         super().__init__(group)
 
         data = ENEMY_TYPES[enemy_type]
-
+        self.wave_director = wave_director
         # Stats
         self.speed = data["speed"]
         base_hp = data["hp"]
@@ -113,6 +113,10 @@ class Monster(pygame.sprite.Sprite):
         if self.money_system:
             self.money_system.on_enemy_killed()
         self.kill()
+
+        if hasattr(self.wave_director, "ai"):
+            self.wave_director.ai.casualties += 1
+
 
     # -----------------------------
     # HP BAR

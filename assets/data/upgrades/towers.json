@@ -74,8 +74,8 @@
 
         "projectile": "projectiles/bomb.png",
         "damage": 40,
-        "range": 80,
-        "fire_rate": 0.5,
+        "range": 200,
+        "fire_rate": 1.0,
         "projectile_speed": 250,
         "size": [45, 70],
         "sound": "assets/audio/sfx/fireball.mp3"
