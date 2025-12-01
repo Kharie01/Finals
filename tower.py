@@ -4,11 +4,11 @@ class Tower(pygame.sprite.Sprite):
     def __init__(self, pos, idle_frames, building_frames, upgrade_frames,
                 damage=10, range_=100, fire_rate=1.0,
                 projectile_image=None, projectile_speed=300, size=(64, 64),
-                money_system=None, tower_type=None,weapon_frames=None,sound_path=None):
-                money_system=None, tower_type=None,sound_path=None, sfx_volume=1.0):
+                money_system=None, tower_type=None,weapon_frames=None,sound_path=None, sfx_volume=1.0):
 
         super().__init__()
         MAX_LEVEL = 3
+        hello = 2
         # --- Images ---
         self.idle_frames = [pygame.transform.scale(img, size) for img in idle_frames]
         self.building_frames = [pygame.transform.scale(img, size) for img in building_frames]
