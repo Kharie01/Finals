@@ -2,8 +2,10 @@ import pygame
 
 
 class CastleBox(pygame.sprite.Sprite):
-    def __init__(self, pos, width, height, group, image):
+    def __init__(self, pos, width, height, group, image, game):
         super().__init__(group)
+
+        self.game = game
 
         self.image = pygame.transform.scale(image, (width, height))
         self.rect = self.image.get_rect(topleft=(pos[0], pos[1] + height // 100))
@@ -16,16 +18,23 @@ class CastleBox(pygame.sprite.Sprite):
     def take_damage(self, amount):
         if not self.has_hp:
             return
-
+        
+        old_hp = self.hp
         self.hp = max(0, self.hp - amount)
-        print("Castle HP:", self.hp)
+        print("TAKE_DAMAGE CALLED - has_hp:", self.has_hp, "old_hp:", old_hp, "new_hp:", self.hp)
 
-        # Automatically assign HUD castle
+        # Assign HUD castle
         try:
-            from main import game
-            game.main_castle = self
+            self.game.main_castle = self
         except:
             pass
+
+        # GAME OVER TRIGGER — MUST CHECK BOTH CONDITIONS
+        if old_hp > 0 and self.hp == 0:
+            try:
+                self.game.trigger_game_over()
+            except Exception as e:
+                print("Error", e)
 
     def draw_health(self, surface):
         if not self.has_hp:

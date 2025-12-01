@@ -115,73 +115,62 @@ class WaveDirector:
         self.current_waypoints = None
         self.paths = waypoint_paths
 
-        # Wave announcement state
-        self.wave_announce_alpha = 0
-        self.wave_announce_timer = 0
-        self.wave_announce_duration = 2.0     # fully visible
-        self.wave_fade_speed = 150            # alpha per second
-        self.wave_state = "idle"              # "fade_in", "hold", "fade_out"
-
         self.GAME_WIDTH = game_width
         self.GAME_HEIGHT = game_height
+
+                # --- WAVE ANNOUNCEMENT ---
+        self.wave_announce_duration = 2.5     # seconds
+        self.wave_announce_timer = 0
+        self.wave_state = "idle"              # "idle", "announce"
+        self.wave_header_surf = None
+        self.wave_path_surf = None
+        self.wave_enemy_surf = None
+        self.wave_header_pos = (game_width // 2, game_height // 2 - 60)
+        self.wave_path_pos   = (game_width // 2, game_height // 2)
+        self.wave_enemy_pos  = (game_width // 2, game_height // 2 + 40)
+        self.wave_announce_alpha = 255
+
 
     def start_wave(self, towers, force=False):
         wave = self.ai.generate_wave(towers, force=force)
         if wave:
             weights = [0.5, 0.5]  # 70% chance for path 1, 30% for path 2
             self.current_waypoints = random.choices(self.paths, weights)[0]
-    
-            wave_number = self.ai.wave_number - 1
-            path_index = 0 if self.current_waypoints == self.paths[0] else 1
-            enemies_text = ", ".join(wave)
-
-            # ---- FONTS ----
-            header_font    = pygame.font.Font("assets/Monocraft.ttc", 80)  # big header
-            subheader_font = pygame.font.Font("assets/Monocraft.ttc", 48)  # medium
-            normal_font    = pygame.font.Font("assets/Monocraft.ttc", 32)  # normal text
-
-            # ---- RENDER TEXT SURFACES ----
-            self.wave_header_surf = header_font.render(f"Wave {wave_number}", True, (255, 230, 80))
-            self.wave_path_surf = subheader_font.render(f"Path: {path_index}", True, (220, 220, 255))
-            self.wave_enemy_surf = normal_font.render(f"Enemies: {enemies_text}", True, (255, 255, 255))
-
-            # ---- POSITIONS (centered horizontally) ----
-            screen_center = self.GAME_WIDTH // 2
-
-            self.wave_header_pos = self.wave_header_surf.get_rect(center=(screen_center, 100))
-            self.wave_path_pos   = self.wave_path_surf.get_rect(center=(screen_center, 160))
-            self.wave_enemy_pos  = self.wave_enemy_surf.get_rect(center=(screen_center, 200))
-
-            # ---- Start fade-in animation ----
-            self.wave_announce_alpha = 0
-            self.wave_announce_timer = 0
-            self.wave_state = "fade_in"
-
+            
             self.current_wave = wave
             self.enemies_spawned = 0
             self.spawn_timer = 0
 
-    def update_wave_announcement(self, dt):
+            self.make_wave_announcement(wave)
 
-        if self.wave_state == "fade_in":
-            print("a")
-            self.wave_announce_alpha += self.wave_fade_speed * dt
-            if self.wave_announce_alpha >= 255:
-                self.wave_announce_alpha = 255
-                self.wave_state = "hold"
+    def make_wave_announcement(self, wave):
+        font_big   = pygame.font.Font("assets/Monocraft-Bold.ttf", 80)
+        font_medium = pygame.font.Font("assets/Monocraft.ttc", 40)
+        font_small = pygame.font.Font("assets/Monocraft.ttc", 16)
 
-        elif self.wave_state == "hold":
-            print("b")
-            self.wave_announce_timer += dt
-            if self.wave_announce_timer >= self.wave_announce_duration:
-                self.wave_state = "fade_out"
+        wave_num = self.ai.wave_number - 1
+        path_name = "Left" if self.current_waypoints == self.paths[0] else "Right"
 
-        elif self.wave_state == "fade_out":
-            print("C")
-            self.wave_announce_alpha -= self.wave_fade_speed * dt
-            if self.wave_announce_alpha <= 0:
-                self.wave_state = "idle"
-                self.wave_announce_alpha = 0
+        # Convert list ["grunt", "tank"] → "grunt, tank"
+        enemy_list = ", ".join(wave)
+
+        # Render text
+        self.wave_header_surf = font_big.render(f"WAVE {wave_num}", True, (255,255,255))
+        self.wave_path_surf   = font_medium.render(f"SPAWN SIDE: {path_name}", True, (255,255,100))
+        self.wave_enemy_surf  = font_small.render(f"ENEMIES: {enemy_list}", True, (200,255,200))
+
+        # Center alignment adjustments
+        self.wave_header_pos = (self.GAME_WIDTH // 2 - self.wave_header_surf.get_width() // 2,
+                                self.GAME_HEIGHT // 2 - 100)
+        self.wave_path_pos   = (self.GAME_WIDTH // 2 - self.wave_path_surf.get_width() // 2,
+                                self.GAME_HEIGHT // 2)
+        self.wave_enemy_pos  = (self.GAME_WIDTH // 2 - self.wave_enemy_surf.get_width() // 2,
+                                self.GAME_HEIGHT // 2 + 50)
+
+        self.wave_state = "announce"
+        self.wave_announce_timer = 0
+        self.wave_announce_alpha = 255
+
 
     def update(self, dt, towers):
         if not self.current_wave:
@@ -198,7 +187,7 @@ class WaveDirector:
         self.spawn_timer += dt
         if self.spawn_timer >= self.spawn_interval / 1000.0:
             enemy_type = self.current_wave[self.enemies_spawned]
-            self.spawn_callback(enemy_type, self.current_waypoints)
+            self.spawn_callback(enemy_type, self.current_waypoints, self.ai.wave_number - 1)
             self.enemies_spawned += 1
             self.spawn_timer = 0
 
@@ -207,6 +196,13 @@ class WaveDirector:
             self.current_wave = []
             self.enemies_spawned = 0
             self.spawn_timer = 0
-        
-        self.update_wave_announcement(dt)
+
+        if self.wave_state == "announce":
+            self.wave_announce_timer += dt
+            if self.wave_announce_timer >= self.wave_announce_duration:
+                self.wave_state = "idle"
+            else:
+                # Fade from 255 → 0
+                progress = self.wave_announce_timer / self.wave_announce_duration
+                self.wave_announce_alpha = max(0, 255 - int(progress * 255))
 
