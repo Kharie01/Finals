@@ -33,12 +33,13 @@ class TowerDefenseEnemyAI:
         self.wave_number = 1
         self.last_wave_time = 0.0
         self.wave_cooldown = 6.0
+        self.casualties = 0
         random.seed()
 
     def update_state(self):
         # remove cooldown reset completely
         # self.wave_cooldown should NOT be touched here
-        self.wave_cooldown = 0.0
+        self.wave_cooldown = 20
 
         if self.wave_number < 4:
             self.state = EnemyAIState.EARLY_GAME
@@ -187,7 +188,7 @@ class WaveDirector:
         self.spawn_timer += dt
         if self.spawn_timer >= self.spawn_interval / 1000.0:
             enemy_type = self.current_wave[self.enemies_spawned]
-            self.spawn_callback(enemy_type, self.current_waypoints, self.ai.wave_number - 1)
+            self.spawn_callback(enemy_type, self.current_waypoints, self.ai.wave_number - 1, self)
             self.enemies_spawned += 1
             self.spawn_timer = 0
 
@@ -205,4 +206,13 @@ class WaveDirector:
                 # Fade from 255 → 0
                 progress = self.wave_announce_timer / self.wave_announce_duration
                 self.wave_announce_alpha = max(0, 255 - int(progress * 255))
+    
+    def get_time_until_next_wave(self):
+        """Return remaining time (in seconds) until the next wave spawns."""
+        now = time.time()
+        elapsed = now - self.ai.last_wave_time
+        remaining = max(0, self.ai.wave_cooldown - elapsed)
+        return remaining
+    
+    
 
