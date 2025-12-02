@@ -307,7 +307,7 @@ class TowerDefense:
         # Clouds background
         if not hasattr(self, "cloud"):
             for cloud in range(5):
-                self.cloud = UserInterface("cloud",(randint(-100, self.GAME_WIDTH), randint(0, self.GAME_HEIGHT // 2 - 200)),pygame.image.load(join('assets', 'images', 'startscreen', 'clouds', f'cloud{randint(1, 4)}.png')).convert_alpha(),(300, 80),self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, None)
+                self.cloud = UserInterface("cloud",(randint(-100, self.GAME_WIDTH), randint(0, self.GAME_HEIGHT // 2 - 200)),pygame.image.load(resource_path(f'assets/images/startscreen/clouds/cloud{randint(1, 4)}.png')).convert_alpha(),(300, 80),self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, None)
                 self.start_ui.append(self.cloud)
 
         if not hasattr(self, "logo"):
@@ -322,7 +322,7 @@ class TowerDefense:
             self.start_ui.append(ui)
 
         if not self.settings_ui_created:    
-            self.settings_ui_surface = UserInterface("ui_bg", (-self.GAME_WIDTH, self.GAME_HEIGHT // 2), pygame.image.load(join('assets', 'images', 'grybg.png')).convert_alpha(), (self.GAME_WIDTH, self.GAME_HEIGHT), self.settings_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, None)
+            self.settings_ui_surface = UserInterface("ui_bg", (-self.GAME_WIDTH, self.GAME_HEIGHT // 2), pygame.image.load(resource_path('assets/images/grybg.png')).convert_alpha(), (self.GAME_WIDTH, self.GAME_HEIGHT), self.settings_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, None)
             self.settings_ui_surface.set_opacity(200) 
             self.settings_ui_back_btn = UserInterface("play_back_btn", (-self.GAME_WIDTH + 60, 20), self.map_selection_images["back"], (139, 58), self.settings_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
 
@@ -369,7 +369,7 @@ class TowerDefense:
         for ui in (self.map_button, self.upgrades_button, self.back_button):
             self.map_ui.append(ui)
 
-        self.map_ui_surface = UserInterface("ui_bg", (-self.GAME_WIDTH, self.GAME_HEIGHT // 2), pygame.image.load(join('assets', 'images', 'grybg.png')).convert_alpha(), (self.GAME_WIDTH, self.GAME_HEIGHT), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, None)
+        self.map_ui_surface = UserInterface("ui_bg", (-self.GAME_WIDTH, self.GAME_HEIGHT // 2), pygame.image.load(resource_path('assets/images/grybg.png')).convert_alpha(), (self.GAME_WIDTH, self.GAME_HEIGHT), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, None)
         self.map_ui_surface.set_opacity(200)  # Slightly transparent (0-255, 255 is fully opaque)
         self.map_ui_back_btn = UserInterface("ui_back_btn", (-self.GAME_WIDTH + 60, 0 + 60), self.map_selection_images["back"], (139, 58), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
         self.map_ui_play_btn = UserInterface("ui_play_btn", (-self.GAME_WIDTH, self.GAME_HEIGHT - 200), self.startscreen_images["play"], (150, 65), self.ui_sprites, self.GAME_WIDTH, self.GAME_HEIGHT, self.hover_sfx)
