@@ -145,9 +145,9 @@ class WaveDirector:
             self.make_wave_announcement(wave)
 
     def make_wave_announcement(self, wave):
-        font_big   = pygame.font.Font("assets/Monocraft-Bold.ttf", 80)
-        font_medium = pygame.font.Font("assets/Monocraft.ttc", 40)
-        font_small = pygame.font.Font("assets/Monocraft.ttc", 16)
+        font_big   = pygame.font.Font(resource_path("assets/Monocraft-Bold.ttf"), 80)
+        font_medium = pygame.font.Font(resource_path("assets/Monocraft.ttc"), 40)
+        font_small = pygame.font.Font(resource_path("assets/Monocraft.ttc"), 16)
 
         wave_num = self.ai.wave_number - 1
         path_name = "Left" if self.current_waypoints == self.paths[0] else "Right"

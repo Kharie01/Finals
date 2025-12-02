@@ -14,15 +14,6 @@ from money import MoneySystem
 import pygame
 import json
 
-def resource_path(relative_path):
-    # For PyInstaller compatibility (bundles assets into temp folder)
-    try:
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-
-    return os.path.join(base_path, relative_path)
-
 def format_time(seconds):
     minutes = int(seconds) // 60
     seconds = int(seconds) % 60
@@ -131,30 +122,30 @@ class TowerDefense:
                                 "stone": pygame.image.load(resource_path('assets/images/mapscreen/upgrades/stone.png')).convert_alpha(),
                                 "slingshot": pygame.image.load(resource_path('assets/images/mapscreen/upgrades/slingshot.png')).convert_alpha(),
                                 "bomb": pygame.image.load(resource_path('assets/images/mapscreen/upgrades/bomb.png')).convert_alpha()}
-        self.map_images = {"map1": pygame.image.load(join('assets', 'images', 'mapscreen', 'map1.png')).convert_alpha(),
-                            "map2": pygame.image.load(join('assets', 'images', 'mapscreen', 'map2.png')).convert_alpha()}
-        self.settings_images = {"display": pygame.image.load(join('assets', 'images', 'startscreen','settings', 'display.png')).convert_alpha(),
-                                "music": pygame.image.load(join('assets', 'images', 'startscreen','settings', 'music.png')).convert_alpha(),
-                                "sfx": pygame.image.load(join('assets', 'images', 'startscreen','settings', 'sfx.png')).convert_alpha()
+        self.map_images = {"map1": pygame.image.load(resource_path('assets/images/mapscreen/map1.png')).convert_alpha(),
+                            "map2": pygame.image.load(resource_path('assets/images/mapscreen/map2.png')).convert_alpha()}
+        self.settings_images = {"display": pygame.image.load(resource_path('assets/images/startscreen/settings/display.png')).convert_alpha(),
+                                "music": pygame.image.load(resource_path('assets/images/startscreen/settings/music.png')).convert_alpha(),
+                                "sfx": pygame.image.load(resource_path('assets/images/startscreen/settings/sfx.png')).convert_alpha()
                                 }
-        self.slider_images = {"handle": pygame.image.load(join('assets', 'images', 'slider','slider_handle.png')).convert_alpha(),
-                                "bar": pygame.image.load(join('assets', 'images', 'slider','slider_bar.png')).convert_alpha()}
-        self.drop_down_images = {"fullscreen": pygame.image.load(join('assets', 'images', 'startscreen', 'settings', 'fullscreen.png')).convert_alpha(),
-                                "1280": pygame.image.load(join('assets', 'images', 'startscreen', 'settings', '1280x720.png')).convert_alpha(),
-                                "1600": pygame.image.load(join('assets', 'images', 'startscreen', 'settings', '1600x900.png')).convert_alpha(),
-                                "arrow": pygame.image.load(join('assets', 'images', 'startscreen', 'settings', 'arrow.png')).convert_alpha()}
+        self.slider_images = {"handle": pygame.image.load(resource_path('assets/images/slider/slider_handle.png')).convert_alpha(),
+                                "bar": pygame.image.load(resource_path('assets/images/slider/slider_bar.png')).convert_alpha()}
+        self.drop_down_images = {"fullscreen": pygame.image.load(resource_path('assets/images/startscreen/settings/fullscreen.png')).convert_alpha(),
+                                "1280": pygame.image.load(resource_path('assets/images/startscreen/settings/1280x720.png')).convert_alpha(),
+                                "1600": pygame.image.load(resource_path('assets/images/startscreen/settings/1600x900.png')).convert_alpha(),
+                                "arrow": pygame.image.load(resource_path('assets/images/startscreen/settings/arrow.png')).convert_alpha()}
         self.game_icons = {
-            "gear": pygame.image.load(join('assets', 'images', 'icon', 'gear.png')).convert_alpha(),
-            "pause": pygame.image.load(join('assets', 'images', 'icon', 'pause.png')).convert_alpha(),
-            "unpause": pygame.image.load(join('assets', 'images', 'icon', 'unpause.png')).convert_alpha(),
-            "2x": pygame.image.load(join('assets', 'images', 'icon', '2x.png')).convert_alpha()
+            "gear": pygame.image.load(resource_path('assets/images/icon/gear.png')).convert_alpha(),
+            "pause": pygame.image.load(resource_path('assets/images/icon/pause.png')).convert_alpha(),
+            "unpause": pygame.image.load(resource_path('assets/images/icon/unpause.png')).convert_alpha(),
+            "2x": pygame.image.load(resource_path('assets/images/icon/2x.png')).convert_alpha()
         }
 
         # font loader
-        self.small   = pygame.font.Font("assets/Monocraft.ttc", 12)
-        self.title_f = pygame.font.Font("assets/Monocraft.ttc", 14)
-        self.title = pygame.font.Font("assets/Monocraft.ttc", 32)
-        self.medium = pygame.font.Font("assets/Monocraft.ttc", 24)
+        self.small   = pygame.font.Font(resource_path("assets/Monocraft.ttc"), 12)
+        self.title_f = pygame.font.Font(resource_path("assets/Monocraft.ttc"), 14)
+        self.title = pygame.font.Font(resource_path("assets/Monocraft.ttc"), 32)
+        self.medium = pygame.font.Font(resource_path("assets/Monocraft.ttc"), 24)
 
         self.multiplier_labels = {
             "title": self.title_f.render("ACTIVE MULTIPLIERS:", True, (255,255,255)),
@@ -192,7 +183,7 @@ class TowerDefense:
         return pygame.image.load(path).convert_alpha()
 
     def load_towers_from_json(self):
-        json_path = "assets/data/upgrades/towers.json"
+        json_path = resource_path("assets/data/upgrades/towers.json")
 
         with open(json_path, "r") as f:
             data = json.load(f)
@@ -215,13 +206,13 @@ class TowerDefense:
             rect = pygame.Rect(x, y, slot_w, slot_h)
 
             folder = "assets/data/graphics/" + tdata["folder"]
-            idle = self.load_image(f"{folder}/{tdata['idle']}")
-            icon = pygame.transform.scale(self.load_image("assets/images/mapscreen/" + tdata["icon"]), (slot_w, slot_h))
-            build_frames = [self.load_image(f"{folder}/{img}") for img in tdata["build"]]
-            upgrade_frames = [self.load_image(f"{folder}/{img}") for img in tdata["upgrades"]]
-            weapon_frames = [self.load_image(f"{folder}/{img}") 
-                 for img in tdata.get("weapon", [])]
-            projectile = self.load_image("assets/data/graphics/" + tdata["projectile"])
+            idle = self.load_image(resource_path(f"{folder}/{tdata['idle']}"))
+            icon = pygame.transform.scale(self.load_image(resource_path("assets/images/mapscreen/" + tdata["icon"])), (slot_w, slot_h))
+            build_frames = [self.load_image(resource_path(f"{folder}/{img}")) for img in tdata["build"]]
+            upgrade_frames = [self.load_image(resource_path(f"{folder}/{img}")) for img in tdata["upgrades"]]
+            weapon_frames = [self.load_image(resource_path(f"{folder}/{img}")) 
+                for img in tdata.get("weapon", [])]
+            projectile = self.load_image(resource_path("assets/data/graphics/" + tdata["projectile"]))
 
             self.tower_menu.append({
                 "name": tower_name,
@@ -244,19 +235,20 @@ class TowerDefense:
             slot_index += 1
 
     def load_permanent_upgrades(self):
-        path = "assets/data/upgrades/permanent_upgrades.json"
-        try:
-            with open(path, "r") as f:
+        # Load player save if exists
+        if os.path.exists(UPGRADES_SAVE):
+            with open(UPGRADES_SAVE, "r") as f:
                 self.permanent_upgrades = json.load(f)
-        except FileNotFoundError:
-            print("WARNING: permanent_upgrades.json not found!")
-            self.permanent_upgrades = {}
+            return
+
+        # Else load default template from assets
+        default_path = resource_path("assets/data/upgrades/permanent_upgrades.json")
+        with open(default_path, "r") as f:
+            self.permanent_upgrades = json.load(f)
 
     def save_permanent_upgrades(self):
-        path = "assets/data/upgrades/permanent_upgrades.json"
-        with open(path, "w") as f:
+        with open(UPGRADES_SAVE, "w") as f:
             json.dump(self.permanent_upgrades, f, indent=4)
-        print("Permanent upgrades saved!")
 
     def save_settings(self):
         data = {
@@ -264,44 +256,33 @@ class TowerDefense:
             "sfx": self.slider_sfx.get_value(),
             "resolution": self.current_resolution
         }
-        with open("assets/data/settings.json", "w") as f:
+        with open(SETTINGS_SAVE, "w") as f:
             json.dump(data, f, indent=4)
 
     def load_display_settings(self):
-        try:
-            with open("assets/data/settings.json", "r") as f:
-                data = json.load(f)
-                return data
-        except:
-            return {"resolution": "1280x720"}
+        if os.path.exists(SETTINGS_SAVE):
+            with open(SETTINGS_SAVE, "r") as f:
+                return json.load(f)
+
+        return {"resolution": "1280x720", "music": 50, "sfx": 50}
 
     def load_audio_settings(self):
-        try:
-            with open("assets/data/settings.json", "r") as f:
+        if os.path.exists(SETTINGS_SAVE):
+            with open(SETTINGS_SAVE, "r") as f:
                 data = json.load(f)
-        except FileNotFoundError:
-            # File missing → create defaults
-            data = {
-                "music": 50,
-                "sfx": 50,
-                "resolution": "1280x720"
-            }
-            with open("settings.json", "w") as f:
+        else:
+            data = {"music": 50, "sfx": 50, "resolution": "1280x720"}
+            with open(SETTINGS_SAVE, "w") as f:
                 json.dump(data, f, indent=4)
 
-        # Apply to sliders if they exist
-        if hasattr(self, "slider_music") and self.slider_music:
-            self.slider_music.set_value(data.get("music", 50))
-        if hasattr(self, "slider_sfx") and self.slider_sfx:
-            self.slider_sfx.set_value(data.get("sfx", 50))
+        if hasattr(self, "slider_music"):
+            self.slider_music.set_value(data["music"])
+        if hasattr(self, "slider_sfx"):
+            self.slider_sfx.set_value(data["sfx"])
 
-        # Apply resolution too
-        self.current_resolution = data.get("resolution", "1280x720")
-
-        # Apply loaded values (with safe fallback)
-        self.music_volume = data.get("music", 1.0)
-        self.sfx_volume = data.get("sfx", 1.0)
-        self.current_resolution = data.get("resolution", "1280x720")
+        self.current_resolution = data["resolution"]
+        self.music_volume = data["music"]
+        self.sfx_volume = data["sfx"]
     
     def apply_saved_resolution(self):
         if self.current_resolution == "fullscreen":
@@ -474,9 +455,6 @@ class TowerDefense:
             if self.exp_system.stat_points < cost:
                 print("[UPGRADE] Not enough stat points!")
                 return
-            else:
-                self.exp_system.stat_points -= cost
-                print(f"[UPGRADE] {tower_name} upgraded! SP left: {self.exp_system.stat_points}")
                 
 
         # Define stat changes
@@ -590,7 +568,7 @@ class TowerDefense:
         
         self.inGame = True
         self.grass_tiles = []  # initialize here
-        tmx_data = load_pygame(join('assets', 'data', 'tmx', 'finals.tmx'))
+        tmx_data = load_pygame(resource_path('assets/data/tmx/finals.tmx'))
 
         # Ground tiles
         ground_layer = tmx_data.get_layer_by_name("Ground")
@@ -718,7 +696,7 @@ class TowerDefense:
                 TEXT_COLOR = (240, 220, 180)
                 GOLD = (212, 175, 55)
 
-                font = pygame.font.Font("assets/Monocraft.ttc", 12)   
+                font = pygame.font.Font(resource_path("assets/Monocraft.ttc"), 12)   
 
                 # Always draw delete button
                 tower.delete_button = pygame.Rect(tower.rect.right + 10, tower.rect.top, 80, 32)
@@ -878,8 +856,8 @@ class TowerDefense:
         pygame.draw.rect(surface, (100,80,60),
                         (panel_x, panel_y, panel_w, panel_h), 2, border_radius=12)
 
-        small = pygame.font.Font("assets/Monocraft.ttc", 12)
-        title_f = pygame.font.Font("assets/Monocraft.ttc", 14)
+        small = pygame.font.Font(resource_path("assets/Monocraft.ttc"), 12)
+        title_f = pygame.font.Font(resource_path("assets/Monocraft.ttc"), 14)
 
         xpos = panel_x + 15
         ypos = panel_y + 5
@@ -981,14 +959,14 @@ class TowerDefense:
         )
 
         # ===== EXP GAINED TEXT =====
-        font = pygame.font.Font("assets/Monocraft-Bold.ttf", 40)
+        font = pygame.font.Font(resource_path("assets/Monocraft-Bold.ttf"), 40)
         exp_text_str = f"EXP GAINED: {gained_exp}"
 
         self.exp_text_surface = font.render(exp_text_str, True, (255, 215, 0))
         self.exp_text_rect = self.exp_text_surface.get_rect()
 
         # ===== "PRESS ANY KEY" TEXT =====
-        small_font = pygame.font.Font("assets/Monocraft.ttc", 26)
+        small_font = pygame.font.Font(resource_path("assets/Monocraft.ttc"), 26)
         press_text_str = "PRESS ANY KEY TO RETURN"
 
         self.press_text_surface = small_font.render(press_text_str, True, (255, 255, 255))
@@ -1065,97 +1043,6 @@ class TowerDefense:
         self.upgrade_ui.clear()
 
         self.start_screen()
-
-    def confirmation(self, message="Are you sure?"):
-        """
-        HUD-styled confirmation dialog.
-        ESC = cancel, SPACE = confirm.
-        Blocks the game until the user decides.
-        Returns True (confirm) or False (cancel)
-        """
-
-        # ----------- Colors (from your HUD screenshot) -----------
-        PANEL_BG     = (71, 42, 26)
-        PANEL_BORDER = (44, 28, 19)
-        PANEL_SHADOW = (0, 0, 0, 120)
-
-        # ----------- Fonts -----------
-        title_font = pygame.font.Font("assets/Monocraft-Bold.ttf", 32)
-        sub_font   = pygame.font.Font("assets/Monocraft-Bold.ttf", 20)
-
-        # ----------- Render text -----------
-        title_surf = title_font.render(message, True, (255, 255, 255))
-        esc_surf   = sub_font.render("Press ESC to cancel", True, (255, 180, 180))
-        space_surf = sub_font.render("Press SPACE to confirm", True, (180, 255, 180))
-
-        # ----------- Box sizing -----------
-        padding = 40
-        spacing = 20
-
-        max_w = max(title_surf.get_width(), esc_surf.get_width(), space_surf.get_width())
-        total_h = (
-            title_surf.get_height() +
-            esc_surf.get_height() +
-            space_surf.get_height() +
-            spacing * 2
-        )
-
-        box_w = max_w + padding * 2
-        box_h = total_h + padding * 2
-
-        box_x = (self.GAME_WIDTH - box_w) // 2
-        box_y = (self.GAME_HEIGHT - box_h) // 2
-        box_rect = pygame.Rect(box_x, box_y, box_w, box_h)
-
-        # ----------- Modal loop (blocks until space/esc) -----------
-        clock = pygame.time.Clock()
-
-        while True:
-            dt = clock.tick(60)
-
-            # Handle events specifically for this dialog
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    quit()
-
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        return False
-                    if event.key == pygame.K_SPACE:
-                        return True
-
-            # ----------- Darken background -----------
-            dark = pygame.Surface((self.GAME_WIDTH, self.GAME_HEIGHT), pygame.SRCALPHA)
-            dark.fill((0, 0, 0, 160))
-            self.game_surface.blit(dark, (0, 0))
-
-            # ----------- Draw shadow -----------
-            shadow = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
-            shadow.fill(PANEL_SHADOW)
-            self.game_surface.blit(shadow, (box_x, box_y + 4))
-
-            # ----------- Draw Panel -----------
-            pygame.draw.rect(self.game_surface, PANEL_BG, box_rect, border_radius=12)
-            pygame.draw.rect(self.game_surface, PANEL_BORDER, box_rect, 3, border_radius=12)
-
-            # ----------- Draw Text (centered) -----------
-            cx = box_rect.centerx
-            y = box_rect.y + padding
-
-            self.game_surface.blit(title_surf, (cx - title_surf.get_width() // 2, y))
-            y += title_surf.get_height() + spacing
-
-            self.game_surface.blit(esc_surf, (cx - esc_surf.get_width() // 2, y))
-            y += esc_surf.get_height() + spacing
-
-            self.game_surface.blit(space_surf, (cx - space_surf.get_width() // 2, y))
-
-            # ----------- Apply scaling before showing ----------- 
-            window_w, window_h = self.screen.get_size()
-            scaled = pygame.transform.smoothscale(self.game_surface, (window_w, window_h))
-            self.screen.blit(scaled, (0, 0))
-            pygame.display.update()
 
     # -----------------------------------------------
     # Main game loop
@@ -1464,7 +1351,7 @@ class TowerDefense:
                                     self.time_scale = 2.0 if self.fast_forward else 1.0
                                     print(self.time_scale)
                                 elif ui.name == "quit":
-                                    if self.confirmation("Quit Match?"):
+                                    if confirmation(self, "Quit Match?"):
                                         self.reset_game()
 
                 elif event.type == pygame.MOUSEMOTION:
@@ -1590,7 +1477,7 @@ class TowerDefense:
                 pygame.draw.rect(self.game_surface, (60, 40, 30), (panel_x, panel_y, panel_w, panel_h), border_radius=12)
                 pygame.draw.rect(self.game_surface, (100, 80, 60), (panel_x, panel_y, panel_w, panel_h), 2, border_radius=12)
 
-                font_small = pygame.font.Font("assets/Monocraft.ttc", 12)   # SHRUNK FONT
+                font_small = pygame.font.Font(resource_path("assets/Monocraft.ttc"), 12)   # SHRUNK FONT
 
                 for tower_btn in self.tower_menu:
                     x, y = tower_btn["rect"].topleft
