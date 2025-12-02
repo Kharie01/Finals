@@ -1,7 +1,3 @@
-import os
-# Must be set BEFORE pygame.init()
-os.environ["SDL_VIDEO_CENTERED"] = "1"
-os.environ["SDL_VIDEO_WINDOW_POS"] = "center"
 from settings import *
 from sprites import *
 from monsters import Monster
@@ -17,6 +13,15 @@ from pytmx.util_pygame import load_pygame
 from money import MoneySystem 
 import pygame
 import json
+
+def resource_path(relative_path):
+    # For PyInstaller compatibility (bundles assets into temp folder)
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 def format_time(seconds):
     minutes = int(seconds) // 60
@@ -60,10 +65,10 @@ class TowerDefense:
 
         self.apply_saved_resolution()
         pygame.display.set_caption("Fortress Frontline")
-        pygame.display.set_icon(pygame.image.load(join('assets', 'images', 'icon', 'gameicon.ico')).convert_alpha())
+        pygame.display.set_icon(pygame.image.load(resource_path('assets/images/icon/gameicon.ico')).convert_alpha())
 
         # Custom mouse cursor
-        mouse_cursor_img = pygame.image.load(join('assets', 'images', 'mouse.png')).convert_alpha()
+        mouse_cursor_img = pygame.image.load(resource_path('assets/images/mouse.png')).convert_alpha()
         mouse_cursor_img = pygame.transform.scale(mouse_cursor_img, (40, 32))  # Scale to cursor size
         mouse_cursor = pygame.cursors.Cursor((0, 0), mouse_cursor_img)
         pygame.mouse.set_cursor(mouse_cursor)
@@ -95,37 +100,37 @@ class TowerDefense:
         self.settings_ui_created = False
         self.game_over = False
         self.show_upgrades = False
-        self.base_exp = 25
+        self.base_exp = 50
         self.exp_multiplier = 1.15
 
         # Sounds
-        self.button_sfx = pygame.mixer.Sound(join('assets', 'audio', 'sfx', 'button-click.wav'))
-        self.start_bgmusic = pygame.mixer.Sound(join('assets', 'audio', 'bgm', 'start_bgm.wav'))
-        self.game_bgmusic = pygame.mixer.Sound(join('assets', 'audio', 'bgm', 'game_bgm.wav'))
-        self.hover_sfx = pygame.mixer.Sound(join('assets', 'audio', 'sfx', 'mouse-hover.wav'))
-        self.gameover_sfx = pygame.mixer.Sound(join('assets', 'audio', 'sfx', 'gameover.wav'))
+        self.button_sfx = pygame.mixer.Sound(resource_path('assets/audio/sfx/button-click.wav'))
+        self.start_bgmusic = pygame.mixer.Sound(resource_path('assets/audio/bgm/start_bgm.wav'))
+        self.game_bgmusic = pygame.mixer.Sound(resource_path('assets/audio/bgm/game_bgm.wav'))
+        self.hover_sfx = pygame.mixer.Sound(resource_path('assets/audio/sfx/mouse-hover.wav'))
+        self.gameover_sfx = pygame.mixer.Sound(resource_path('assets/audio/sfx/gameover.wav'))
 
         # Load UI images
         self.startscreen_images = {
-            "start": pygame.image.load(join('assets', 'images', 'startscreen', 'Startscreen.png')).convert_alpha(),
-            "logo": pygame.image.load(join('assets', 'images', 'startscreen', 'logo.png')).convert_alpha(),
-            "play": pygame.image.load(join('assets', 'images', 'startscreen', 'play.png')).convert_alpha(),
-            "setting": pygame.image.load(join('assets', 'images', 'startscreen', 'settings.png')).convert_alpha(),
-            "exit": pygame.image.load(join('assets', 'images', 'startscreen', 'exit.png')).convert_alpha(),
-            "paused": pygame.image.load(join('assets', 'images', 'startscreen', 'paused.png')).convert_alpha(),
-            "gameover": pygame.image.load(join('assets', 'images', 'startscreen', 'game_over.png')).convert_alpha()
+            "start": pygame.image.load(resource_path('assets/images/startscreen/Startscreen.png')).convert_alpha(),
+            "logo": pygame.image.load(resource_path('assets/images/startscreen/logo.png')).convert_alpha(),
+            "play": pygame.image.load(resource_path('assets/images/startscreen/play.png')).convert_alpha(),
+            "setting": pygame.image.load(resource_path('assets/images/startscreen/settings.png')).convert_alpha(),
+            "exit": pygame.image.load(resource_path('assets/images/startscreen/exit.png')).convert_alpha(),
+            "paused": pygame.image.load(resource_path('assets/images/startscreen/paused.png')).convert_alpha(),
+            "gameover": pygame.image.load(resource_path('assets/images/startscreen/game_over.png')).convert_alpha()
             }
         self.map_selection_images = {
-            "map": pygame.image.load(join('assets', 'images', 'mapscreen', 'map.png')).convert_alpha(),
-            "back": pygame.image.load(join('assets', 'images', 'mapscreen', 'back.png')).convert_alpha(),
-            "upgrade": pygame.image.load(join('assets', 'images', 'mapscreen', 'upgrade.png')).convert_alpha()}
-        self.upgrades_images = {"border": pygame.image.load(join('assets', 'images', 'mapscreen', 'border.png')).convert_alpha(),
-                                "upgrade": pygame.image.load(join('assets', 'images', 'mapscreen', 'upgrades', 'up.png')).convert_alpha(),
-                                "downgrade": pygame.image.load(join('assets', 'images', 'mapscreen', 'upgrades', 'down.png')).convert_alpha(),
-                                "archer": pygame.image.load(join('assets', 'images', 'mapscreen', 'upgrades', 'archer.png')).convert_alpha(),
-                                "stone": pygame.image.load(join('assets', 'images', 'mapscreen', 'upgrades', 'stone.png')).convert_alpha(),
-                                "slingshot": pygame.image.load(join('assets', 'images', 'mapscreen', 'upgrades', 'slingshot.png')).convert_alpha(),
-                                "bomb": pygame.image.load(join('assets', 'images', 'mapscreen', 'upgrades', 'bomb.png')).convert_alpha()}
+            "map": pygame.image.load(resource_path('assets/images/mapscreen/map.png')).convert_alpha(),
+            "back": pygame.image.load(resource_path('assets/images/mapscreen/back.png')).convert_alpha(),
+            "upgrade": pygame.image.load(resource_path('assets/images/mapscreen/upgrade.png')).convert_alpha()}
+        self.upgrades_images = {"border": pygame.image.load(resource_path('assets/images/mapscreen/border.png')).convert_alpha(),
+                                "upgrade": pygame.image.load(resource_path('assets/images/mapscreen/upgrades/up.png')).convert_alpha(),
+                                "downgrade": pygame.image.load(resource_path('assets/images/mapscreen/upgrades/down.png')).convert_alpha(),
+                                "archer": pygame.image.load(resource_path('assets/images/mapscreen/upgrades/archer.png')).convert_alpha(),
+                                "stone": pygame.image.load(resource_path('assets/images/mapscreen/upgrades/stone.png')).convert_alpha(),
+                                "slingshot": pygame.image.load(resource_path('assets/images/mapscreen/upgrades/slingshot.png')).convert_alpha(),
+                                "bomb": pygame.image.load(resource_path('assets/images/mapscreen/upgrades/bomb.png')).convert_alpha()}
         self.map_images = {"map1": pygame.image.load(join('assets', 'images', 'mapscreen', 'map1.png')).convert_alpha(),
                             "map2": pygame.image.load(join('assets', 'images', 'mapscreen', 'map2.png')).convert_alpha()}
         self.settings_images = {"display": pygame.image.load(join('assets', 'images', 'startscreen','settings', 'display.png')).convert_alpha(),
@@ -916,7 +921,7 @@ class TowerDefense:
         remaining = self.wave_director.get_time_until_next_wave()
         time_str = format_time(remaining)
 
-        surface.blit(small.render(f"TIME  : {time_str}", True, (255,255,255)),
+        surface.blit(small.render(f"TIME  : {time_str}  (Press space to skip timer)", True, (255,255,255)),
                     (xpos, ypos))
         ypos += 18
 
@@ -970,15 +975,19 @@ class TowerDefense:
             hover_sfx=None
         )
 
-        font = pygame.font.Font("assets/Monocraft.ttc", 50)  # choose your font/size
+        # ===== EXP GAINED TEXT =====
+        font = pygame.font.Font("assets/Monocraft.ttc", 50)
         exp_text_str = f"EXP GAINED: {gained_exp}"
 
-        self.exp_text_surface = font.render(exp_text_str, True, (255, 215, 0))  # gold yellow
+        self.exp_text_surface = font.render(exp_text_str, True, (255, 215, 0))
         self.exp_text_rect = self.exp_text_surface.get_rect()
 
-        # Position: centered horizontally, below the Game Over UI
-        self.exp_text_rect.centerx = self.GAME_WIDTH // 2
-        self.exp_text_rect.top = self.gameover_ui.rect.bottom + 20
+        # ===== "PRESS ANY KEY" TEXT =====
+        small_font = pygame.font.Font("assets/Monocraft.ttc", 36)
+        press_text_str = "PRESS ANY KEY TO RETURN"
+
+        self.press_text_surface = small_font.render(press_text_str, True, (255, 255, 255))
+        self.press_text_rect = self.press_text_surface.get_rect()
 
         self.gameover_ui.move_to()
         self.gameover_sfx.play()
@@ -1046,6 +1055,7 @@ class TowerDefense:
         # --- Restore start UI ---
         self.start_ui.clear()
         self.map_ui.clear()
+        self.settings_ui.clear()
         self.map_selection_ui.clear()
         self.upgrade_ui.clear()
 
@@ -1626,6 +1636,15 @@ class TowerDefense:
             # Draw tower menu with name and price
             
             # optional refactoring (put all draw method in this function) #FIXME
+            if self.game_over:
+                self.exp_text_rect.centerx = self.GAME_WIDTH // 2
+                self.exp_text_rect.top = self.gameover_ui.rect.bottom + 20
+
+                self.press_text_rect.centerx = self.GAME_WIDTH // 2
+                self.press_text_rect.top = self.exp_text_rect.bottom + 25
+
+                self.game_surface.blit(self.exp_text_surface, self.exp_text_rect)
+                self.game_surface.blit(self.press_text_surface, self.press_text_rect)
 
             # Scale game surface to window
             scaled_surface = pygame.transform.smoothscale(self.game_surface, (window_w, window_h))

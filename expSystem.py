@@ -5,7 +5,7 @@ class ExperienceSystem:
         self.current_exp = 0
         self.stat_points = 0     # ADD THIS
 
-        self.exp_per_stat = 100  # EXP needed for 1 stat point (adjust as needed)
+        self.exp_per_stat = 1000  # EXP needed for 1 stat point (adjust as needed)
         self.data_path = "assets/data/player.json"
         self.load_progress()
 
