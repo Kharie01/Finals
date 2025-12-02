@@ -1,4 +1,4 @@
-import pygame
+from settings import *
 
 class Tower(pygame.sprite.Sprite):
     def __init__(self, pos, idle_frames, building_frames, upgrade_frames,
@@ -58,7 +58,8 @@ class Tower(pygame.sprite.Sprite):
 
         # --- Sound ---
         if sound_path:
-            self.shoot_sound = pygame.mixer.Sound(sound_path)
+            fixed_path = resource_path(sound_path)
+            self.shoot_sound = pygame.mixer.Sound(fixed_path)
             self.shoot_sound.set_volume(sfx_volume)
         else:
             self.shoot_sound = None

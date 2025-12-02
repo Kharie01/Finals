@@ -7,6 +7,7 @@ from slider import Slider
 from tower import Tower # import Tower class
 from game_ai import ENEMY_TYPES, WaveDirector
 from expSystem import ExperienceSystem
+from enemy import *
 
 from pytmx.util_pygame import load_pygame
 
@@ -50,6 +51,9 @@ class TowerDefense:
             self.screen = pygame.display.set_mode((self.GAME_WIDTH, self.GAME_HEIGHT))
 
         self.game_surface = pygame.Surface((self.GAME_WIDTH, self.GAME_HEIGHT))
+        self.enemy_animations = load_enemy_animations()
+        for name in ENEMY_TYPES:
+            ENEMY_TYPES[name]["anim"] = self.enemy_animations[name]
 
         self.settings = self.load_display_settings()
         self.current_resolution = self.settings["resolution"]
@@ -92,7 +96,7 @@ class TowerDefense:
         self.game_over = False
         self.show_upgrades = False
         self.base_exp = 50
-        self.exp_multiplier = 1.15
+        self.exp_multiplier = 1.02
 
         # Sounds
         self.button_sfx = pygame.mixer.Sound(resource_path('assets/audio/sfx/button-click.wav'))

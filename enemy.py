@@ -1,114 +1,48 @@
-import pygame
-from os.path import join
+from settings import *
 
-# Initialize Pygame
-pygame.init()
-
-# Must set display mode first for convert_alpha()
-pygame.display.set_mode((1, 1)) # minimal hidden window just for image loading
-
+ENEMY_TYPES = {
+    "grunt":  {"size": (48, 48), "anim": None, "speed": 0.8, "hp": 60, "damage": 10, "flying": False},
+    "fast":   {"size": (40, 40), "anim": None, "speed": 1.2, "hp": 40, "damage": 5,  "flying": False},
+    "tank":   {"size": (90, 90), "anim": None, "speed": 0.4, "hp": 500,"damage": 35, "flying": False},
+    "flying": {"size": (60, 60), "anim": None, "speed": 1.0, "hp": 45, "damage": 10, "flying": True},
+    "swarm":  {"size": (32, 32), "anim": None, "speed": 1.3, "hp": 5,  "damage": 5,  "flying": False},
+}
 
 def load_animation(path, size=None):
     frames = []
-    for i in range(10):  # supports frame_0.png to frame_9.png
+    for i in range(10):
         file = join(path, f"frame_{i}.png")
-        try:
-            img = pygame.image.load(file).convert_alpha()
-
-            # SCALE IF NEEDED
-            if size:
-                img = pygame.transform.smoothscale(img, size)
-
-            frames.append(img)
-        except:
+        if not os.path.exists(file):
             break
-    return frames if frames else [pygame.Surface((1,1))]  # fallback
+        img = pygame.image.load(file).convert_alpha()
+
+        if size:
+            img = pygame.transform.smoothscale(img, size)
+
+        frames.append(img)
+
+    return frames
+
 # -----------------------------
 # Load enemy images manually
 # -----------------------------
 def anim_folder(enemy, direction):
-    return join("assets", "images", "enemies", enemy, direction)
-
-# Load animations
-GRUNT_UP    = load_animation(anim_folder("grunt", "up"))
-GRUNT_DOWN  = load_animation(anim_folder("grunt", "down"))
-GRUNT_LEFT  = load_animation(anim_folder("grunt", "left"))
-GRUNT_RIGHT = load_animation(anim_folder("grunt", "right"))
-
-FAST_UP     = load_animation(anim_folder("fast", "up"))
-FAST_DOWN   = load_animation(anim_folder("fast", "down"))
-FAST_LEFT   = load_animation(anim_folder("fast", "left"))
-FAST_RIGHT  = load_animation(anim_folder("fast", "right"))
-
-TANK_UP     = load_animation(anim_folder("tank", "up"))
-TANK_DOWN   = load_animation(anim_folder("tank", "down"))
-TANK_LEFT   = load_animation(anim_folder("tank", "left"))
-TANK_RIGHT  = load_animation(anim_folder("tank", "right"))
-
-FLYING_UP     = load_animation(anim_folder("flying", "up"))
-FLYING_DOWN   = load_animation(anim_folder("flying", "down"))
-FLYING_LEFT   = load_animation(anim_folder("flying", "left"))
-FLYING_RIGHT  = load_animation(anim_folder("flying", "right"))
-
-SWARM_UP     = load_animation(anim_folder("swarm", "up"))
-SWARM_DOWN   = load_animation(anim_folder("swarm", "down"))
-SWARM_LEFT   = load_animation(anim_folder("swarm", "left"))
-SWARM_RIGHT  = load_animation(anim_folder("swarm", "right"))
+    return resource_path(f"assets/images/enemies/{enemy}/{direction}")
 
 # -----------------------------
 # ENEMY TYPES with placeholder animations
 # -----------------------------
-ENEMY_TYPES = {
-    "grunt": {
-        "speed": 0.80,
-        "hp": 60,
-        "damage": 10,
-        "flying": False,
-        "size": (48, 48),   # ⬅ custom resize
-        "anim": None        # will be auto-filled below
-    },
-    "fast": {
-        "speed": 1.20,
-        "hp": 40,
-        "damage": 5,
-        "flying": False,
-        "size": (40, 40),
-        "anim": None
-    },
-    "tank": {
-        "speed": 0.40,
-        "hp": 500,
-        "damage": 35,
-        "flying": False,
-        "size": (90, 90),
-        "anim": None
-    },
-    "flying": {
-        "speed": 1.00,
-        "hp": 45,
-        "damage": 10,
-        "flying": True,
-        "size": (60, 60),
-        "anim": None
-    },
-    "swarm": {
-        "speed": 1.30,
-        "hp": 5,
-        "damage": 5,
-        "flying": False,
-        "size": (32, 32),
-        "anim": None
-    },
-}
+def load_enemy_animations():
+    animations = {}
 
-# Load enemy animations based on each enemy's size
-for enemy_name, data in ENEMY_TYPES.items():
-    size = data.get("size", None)
+    for name, data in ENEMY_TYPES.items():
+        size = data["size"]
 
-    data["anim"] = {
-        "up":    load_animation(anim_folder(enemy_name, "up"), size=size),
-        "down":  load_animation(anim_folder(enemy_name, "down"), size=size),
-        "left":  load_animation(anim_folder(enemy_name, "left"), size=size),
-        "right": load_animation(anim_folder(enemy_name, "right"), size=size)
-    }
+        animations[name] = {
+            "up":    load_animation(anim_folder(name, "up"), size),
+            "down":  load_animation(anim_folder(name, "down"), size),
+            "left":  load_animation(anim_folder(name, "left"), size),
+            "right": load_animation(anim_folder(name, "right"), size),
+        }
 
+    return animations

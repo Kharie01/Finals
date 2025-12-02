@@ -10,8 +10,8 @@ class ExperienceSystem:
         self.load_progress()
 
     def calculate_exp(self, base_exp: int, wave_count: int, multiplier: float) -> int:
-        gained = base_exp + int(wave_count * multiplier)
-        return max(gained, 0)
+        total_exp = int(base_exp * (multiplier**wave_count - 1) / (multiplier - 1))
+        return max(total_exp, 0)
 
     def add_exp(self, amount: int):
         """Add EXP and convert excess into stat points."""

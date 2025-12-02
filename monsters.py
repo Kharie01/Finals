@@ -1,5 +1,5 @@
 from settings import *
-from enemy import ENEMY_TYPES
+from enemy import *
 import time
 
 class Monster(pygame.sprite.Sprite):
