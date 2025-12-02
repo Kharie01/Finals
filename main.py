@@ -154,6 +154,7 @@ class TowerDefense:
         self.small   = pygame.font.Font("assets/Monocraft.ttc", 12)
         self.title_f = pygame.font.Font("assets/Monocraft.ttc", 14)
         self.title = pygame.font.Font("assets/Monocraft.ttc", 32)
+        self.medium = pygame.font.Font("assets/Monocraft.ttc", 24)
 
         self.multiplier_labels = {
             "title": self.title_f.render("ACTIVE MULTIPLIERS:", True, (255,255,255)),
@@ -527,6 +528,7 @@ class TowerDefense:
         # Animated rect position (follows movement)
         small = self.small
         title = self.title_f
+        medium = self.medium
 
         x = parent_ui.rect.x
         y = parent_ui.rect.y
@@ -575,7 +577,10 @@ class TowerDefense:
 
         if self.show_upgrades:
             sp_text = self.title.render(f"Stat Points: {self.exp_system.stat_points}", True, (255, 255, 255))
-            surface.blit(sp_text, (self.GAME_WIDTH//2 - 100, 60))
+            surface.blit(sp_text, (self.GAME_WIDTH//2 - 100, 100))
+
+            exp_text = medium.render(f"Exp: {self.exp_system.current_exp} / 1000", True, (0, 255, 0))
+            surface.blit(exp_text, (self.GAME_WIDTH//2 - 75, 60))
 
     # -----------------------------------------------
     # Setup map, sprites, castles, monsters
@@ -976,14 +981,14 @@ class TowerDefense:
         )
 
         # ===== EXP GAINED TEXT =====
-        font = pygame.font.Font("assets/Monocraft.ttc", 50)
+        font = pygame.font.Font("assets/Monocraft-Bold.ttf", 40)
         exp_text_str = f"EXP GAINED: {gained_exp}"
 
         self.exp_text_surface = font.render(exp_text_str, True, (255, 215, 0))
         self.exp_text_rect = self.exp_text_surface.get_rect()
 
         # ===== "PRESS ANY KEY" TEXT =====
-        small_font = pygame.font.Font("assets/Monocraft.ttc", 36)
+        small_font = pygame.font.Font("assets/Monocraft.ttc", 26)
         press_text_str = "PRESS ANY KEY TO RETURN"
 
         self.press_text_surface = small_font.render(press_text_str, True, (255, 255, 255))
