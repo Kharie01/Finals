@@ -1061,7 +1061,11 @@ class TowerDefense:
         self.start_screen()
 
     def show_alert(self, text, duration=1.5):
-        self.alert_message = self.alert_font.render(text, True, (255,0,0))
+        if ("Not enough" in text or "Cannot" in text or "error" in text):
+            color = (255, 0, 0)   # Pula
+        else:
+            color = (0, 255, 0)  # Green
+        self.alert_message = self.alert_font.render(text, True, color)
         self.alert_message_timer = duration
     # -----------------------------------------------
     # Main game loop
@@ -1114,9 +1118,9 @@ class TowerDefense:
                                     self.placed_towers.append(self.dragging_tower)
                                     print(f"{self.dragging_tower} placed!")
                                 else:
-                                    self.show_alert("Not enough money to place this tower!")
+                                    self.show_alert("Not enough money! You need more gold.")
                             else:
-                                self.show_alert("Cannot place tower here!")
+                                self.show_alert("Invalid spot! You can’t place a tower here.")
                             # Clear dragging tower regardless of placement
                             self.dragging_tower = None
 
@@ -1147,6 +1151,7 @@ class TowerDefense:
                         self.selected_tower = None
                         for tower in self.placed_towers:
                             if tower.delete_button and tower.delete_button.collidepoint(game_mouse):
+                                self.show_alert('Dismantled Tower → +50 Money')
                                 self.money_system.on_tower_Sell()
                                 self.all_sprites.remove(tower)
                                 self.placed_towers.remove(tower)
@@ -1156,7 +1161,7 @@ class TowerDefense:
                                 if self.money_system.on_tower_upgraded():
                                     tower.upgrade()
                                 else:
-                                    self.show_alert("Not enough money to upgrade tower!")
+                                    self.show_alert("Not enough gold to upgrade this tower!")
                                 break
                             elif tower.rect.collidepoint(game_mouse):
                                 self.selected_tower = tower
