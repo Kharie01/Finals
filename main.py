@@ -97,6 +97,8 @@ class TowerDefense:
         self.show_upgrades = False
         self.base_exp = 50
         self.exp_multiplier = 1.02
+        self.alert_message = None
+        self.alert_message_timer = 0
 
         # Sounds
         self.button_sfx = pygame.mixer.Sound(resource_path('assets/audio/sfx/button-click.wav'))
@@ -1058,6 +1060,9 @@ class TowerDefense:
 
         self.start_screen()
 
+    def show_alert(self, text, duration=1.5):
+        self.alert_message = self.alert_font.render(text, True, (255,0,0))
+        self.alert_message_timer = duration
     # -----------------------------------------------
     # Main game loop
     # -----------------------------------------------
@@ -1109,9 +1114,9 @@ class TowerDefense:
                                     self.placed_towers.append(self.dragging_tower)
                                     print(f"{self.dragging_tower} placed!")
                                 else:
-                                    print("Not enough money to place this tower!")
+                                    self.show_alert("Not enough money to place this tower!")
                             else:
-                                print("Cannot place tower here!")
+                                self.show_alert("Cannot place tower here!")
                             # Clear dragging tower regardless of placement
                             self.dragging_tower = None
 
@@ -1151,7 +1156,7 @@ class TowerDefense:
                                 if self.money_system.on_tower_upgraded():
                                     tower.upgrade()
                                 else:
-                                    print("Not enough money to upgrade tower!")
+                                    self.show_alert("Not enough money to upgrade tower!")
                                 break
                             elif tower.rect.collidepoint(game_mouse):
                                 self.selected_tower = tower
@@ -1381,9 +1386,9 @@ class TowerDefense:
                                 self.placed_towers.append(self.dragging_tower)
                                 print(f"{self.dragging_tower} placed!")
                             else:
-                                print("Not enough money to place this tower!")
+                                self.show_alert("Not enough money to place this tower!")
                         else:
-                            print("Cannot place tower here!")
+                            self.show_alert("Cannot place tower here!")
                         # Clear dragging tower regardless of placement
                         self.dragging_tower = None
 
@@ -1536,7 +1541,6 @@ class TowerDefense:
                 self.draw_tower_multipliers(self.game_surface, self.bomb_tower_upg, "bomb_tower")
             # Draw tower menu with name and price
             
-            # optional refactoring (put all draw method in this function) #FIXME
             if self.game_over:
                 self.exp_text_rect.centerx = self.GAME_WIDTH // 2
                 self.exp_text_rect.top = self.gameover_ui.rect.bottom + 20
@@ -1546,6 +1550,15 @@ class TowerDefense:
 
                 self.game_surface.blit(self.exp_text_surface, self.exp_text_rect)
                 self.game_surface.blit(self.press_text_surface, self.press_text_rect)
+
+            if self.alert_message and self.alert_message_timer > 0:
+                msg_rect = self.alert_message.get_rect(
+                    center=(self.GAME_WIDTH // 2, self.GAME_HEIGHT // 2 + 150)
+                )
+                self.game_surface.blit(self.alert_message, msg_rect)
+                self.alert_message_timer -= dt
+            else:
+                self.alert_message = None
 
             # Scale game surface to window
             scaled_surface = pygame.transform.smoothscale(self.game_surface, (window_w, window_h))

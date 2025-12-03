@@ -73,7 +73,7 @@
         "upgrades": ["bombtower1.png", "bombtower2.png", "bombtower3.png"],
 
         "projectile": "projectiles/bomb.png",
-        "damage": 40,
+        "damage": 30,
         "range": 200,
         "fire_rate": 1.0,
         "projectile_speed": 250,
