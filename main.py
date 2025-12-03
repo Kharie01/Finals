@@ -171,7 +171,7 @@ class TowerDefense:
         self.wave_timer = None
         self.countdown = 0  
         #Money
-        self.money_system = MoneySystem(starting_money=500)
+        self.money_system = MoneySystem(starting_money=200)
 
         # load tower stats and upgrades
         self.load_towers_from_json()
@@ -631,7 +631,7 @@ class TowerDefense:
 
         # Store them as a list of possible path options
         self.all_paths = [self.waypoints, self.waypoints2]
-        self.wave_director = WaveDirector(self.spawn_enemy, self.all_paths, self.GAME_WIDTH, self.GAME_HEIGHT)
+        self.wave_director = WaveDirector(self.spawn_enemy, self.all_paths, self.GAME_WIDTH, self.GAME_HEIGHT, self.money_system)
 
         # Reset wave director every game
         self.wave_director.ai.wave_number = 1
@@ -670,35 +670,18 @@ class TowerDefense:
 
     def can_place_tower(self, pos, tower_size=(64,64)):
         px, py = pos
-        w, h = tower_size
-
-        tower_rect = pygame.Rect(px - w//2, py - h, w, h)   # bottom-center placement
-
-        # Check if all corners are on valid grass tiles
-        corners = [
-            (tower_rect.left, tower_rect.top),
-            (tower_rect.right, tower_rect.top),
-            (tower_rect.left, tower_rect.bottom),
-            (tower_rect.right, tower_rect.bottom),
-            (tower_rect.centerx, tower_rect.bottom),
-        ]
 
         valid_tile = False
         for tile in self.grass_tiles:
-            if tile["id"] == 1:  # grass tile
-                for c in corners:
-                    if tile["rect"].collidepoint(c):
-                        valid_tile = True
-                        break
-            if valid_tile:
+            if tile["rect"].collidepoint(px, py) and tile["id"] == 1:
+                valid_tile = True
                 break
-
         if not valid_tile:
             return False
 
         # Check tower overlap
-        for t in self.placed_towers:
-            if tower_rect.colliderect(t.rect):
+        for tower in self.placed_towers:
+            if tower.rect.collidepoint((px, py)):
                 return False
 
         return True
@@ -1060,6 +1043,7 @@ class TowerDefense:
             if hasattr(self, attr):
                 delattr(self, attr)
 
+        self.money_system = MoneySystem(starting_money=200)
 
         # --- Stop game BGM & restart start screen BGM ---
         self.game_bgmusic.stop()

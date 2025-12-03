@@ -93,8 +93,9 @@ class TowerDefenseEnemyAI:
 
 # Wave Director to manage spawning
 class WaveDirector:
-    def __init__(self, spawn_callback, waypoint_paths, game_width, game_height):
+    def __init__(self, spawn_callback, waypoint_paths, game_width, game_height, money_system=None):
         self.spawn_callback = spawn_callback
+        self.mone_system = money_system
 
         self.ai = TowerDefenseEnemyAI()
         self.current_wave = []
@@ -112,7 +113,7 @@ class WaveDirector:
         self.GAME_HEIGHT = game_height
 
                 # --- WAVE ANNOUNCEMENT ---
-        self.wave_announce_duration = 3     # seconds
+        self.wave_announce_duration = 2.5     # seconds
         self.wave_announce_timer = 0
         self.wave_state = "idle"              # "idle", "announce"
         self.wave_header_surf = None
@@ -134,6 +135,8 @@ class WaveDirector:
             self.enemies_spawned = 0
             self.spawn_timer = 0
 
+            if self.ai.wave_number > 2:
+                self.mone_system.on_wave_completed()
             self.make_wave_announcement(wave)
 
     def make_wave_announcement(self, wave):

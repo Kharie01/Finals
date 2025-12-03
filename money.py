@@ -12,9 +12,9 @@ class MoneySystem:
         self.TOWER_COST = 100
         self.UPGRADE_COST = 75
 
-        self.REWARD_KILL = 25
+        self.REWARD_KILL = 20
         self.REWARD_WAVE_START = 50
-        self.REWARD_WAVE_COMPLETE = 150
+        self.REWARD_WAVE_COMPLETE = 100
         self.REWARD_CASTLE_DEFENSE = 50
 
     # ----------------------------------------------------
