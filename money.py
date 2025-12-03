@@ -11,7 +11,7 @@ class MoneySystem:
         # ---- Game Economy Values (editable anytime) ----
         self.TOWER_COST = 100
         self.UPGRADE_COST = 75
-
+        self.SELL_TOWER = 50
         self.REWARD_KILL = 20
         self.REWARD_WAVE_START = 50
         self.REWARD_WAVE_COMPLETE = 100
@@ -59,6 +59,11 @@ class MoneySystem:
     def on_tower_upgraded(self) -> bool:
         """Called when upgrading a tower."""
         return self.spend(self.UPGRADE_COST)
+    
+    def on_tower_Sell(self):
+        """Called when selling a tower."""
+        self._money += self.SELL_TOWER
+        return self.SELL_TOWER
 
     def on_enemy_killed(self):
         """Called when a tower kills an enemy."""
