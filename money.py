@@ -44,7 +44,7 @@ class MoneySystem:
             self._money -= amount
             print(f"[MONEY] -{amount} → Total: {self._money}")
             return True
-
+    
         print("[MONEY] Transaction failed → Not enough funds!")
         return False
 

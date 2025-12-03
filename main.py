@@ -29,7 +29,7 @@ class TowerDefense:
     def __init__(self):
         pygame.init()
         self.main_castle = None
-        self.load_display_settings()
+        
         self.settings = self.load_display_settings()
         self.GAME_WIDTH  = 1280
         self.GAME_HEIGHT = 720
@@ -150,6 +150,7 @@ class TowerDefense:
         self.title_f = pygame.font.Font(resource_path("assets/Monocraft.ttc"), 14)
         self.title = pygame.font.Font(resource_path("assets/Monocraft.ttc"), 32)
         self.medium = pygame.font.Font(resource_path("assets/Monocraft.ttc"), 24)
+        self.alert_font = pygame.font.Font(resource_path("assets/Monocraft.ttc"), 20)
 
         self.multiplier_labels = {
             "title": self.title_f.render("ACTIVE MULTIPLIERS:", True, (255,255,255)),
@@ -239,16 +240,33 @@ class TowerDefense:
             slot_index += 1
 
     def load_permanent_upgrades(self):
+        DEFAULTS = {
+            "damage_mult": 1.0,
+            "range_mult": 1.0,
+            "fire_rate_mult": 1.0,
+            "projectile_speed_mult": 1.0,
+            "stored_points": 0
+        }
+
         # Load player save if exists
         if os.path.exists(UPGRADES_SAVE):
             with open(UPGRADES_SAVE, "r") as f:
                 self.permanent_upgrades = json.load(f)
-            return
+        else:
+            # Else load default template from assets
+            default_path = resource_path("assets/data/upgrades/permanent_upgrades.json")
+            with open(default_path, "r") as f:
+                self.permanent_upgrades = json.load(f)
 
-        # Else load default template from assets
-        default_path = resource_path("assets/data/upgrades/permanent_upgrades.json")
-        with open(default_path, "r") as f:
-            self.permanent_upgrades = json.load(f)
+        # ------------------------------
+        # SCHEMA PATCH: ensure all keys exist
+        # ------------------------------
+        for tower_name, tower_data in self.permanent_upgrades.items():
+            for key, default_val in DEFAULTS.items():
+                tower_data.setdefault(key, default_val)
+
+        # Save automatically if changes were made
+        self.save_permanent_upgrades()
 
     def save_permanent_upgrades(self):
         with open(UPGRADES_SAVE, "w") as f:
@@ -407,7 +425,7 @@ class TowerDefense:
         self.downgrade_btn_bomb.attach(parent=self.bomb_tower_upg, offset_x=40, offset_y=self.bomb_tower_upg.rect.height + 40)
         self.upgrade_btn_bomb.attach(parent=self.bomb_tower_upg, offset_x=self.bomb_tower_upg.rect.width - 80, offset_y=self.archer_tower_upg.rect.height + 40)
 
-        for ui in (self.archer_tower_upg, self.stone_tower_upg, self.sling_shot_tower_upg, self.bomb_tower_upg, self.upgrade_btn_archer, self.downgrade_btn_archer, self.upgrade_btn_stone, self.downgrade_btn_stone, self.upgrade_btn_slingshot, self.downgrade_btn_slingshot, self.upgrade_btn_bomb, self.downgrade_btn_bomb):
+        for ui in (self.archer_tower_upg, self.stone_tower_upg, self.sling_shot_tower_upg, self.bomb_tower_upg, self.upgrade_btn_archer, self, self.upgrade_btn_stone, self.upgrade_btn_slingshot, self.upgrade_btn_bomb):
             self.upgrade_ui.append(ui)
 
     def create_bottom_buttons(self, parent_ui, name_prefix, x_offset=0):
@@ -419,7 +437,7 @@ class TowerDefense:
 
         upgrade_btn = UserInterface(
             f"{name_prefix}_upgrade",
-            (px + 100 + x_offset, button_y),
+            (px + x_offset, button_y),
             self.upgrades_images["upgrade"],
             (40, 40),
             self.ui_sprites,
@@ -454,27 +472,16 @@ class TowerDefense:
 
         cost = self.upgrade_cost.get(tower_name, 1)
 
-        # --- REQUIRE STAT POINTS ONLY FOR UPGRADE ---
-        if action == "upgrade":
-            if self.exp_system.stat_points < cost:
-                print("[UPGRADE] Not enough stat points!")
-                return
-                
-
         # Define stat changes
         UPGRADE = {
             "damage_mult": 0.10,
             "range_mult": 0.05,
             "fire_rate_mult": -0.05,
-            "projectile_speed_mult": 0.10
+            "projectile_speed_mult": 0.10,
+            "stored_points": 1
         }
 
-        DOWNGRADE = {
-            "damage_mult": -0.10,
-            "range_mult": -0.05,
-            "fire_rate_mult": 0.05,
-            "projectile_speed_mult": -0.10
-        }
+        tower = self.permanent_upgrades[tower_name]
 
         if action == "upgrade":
             vals = UPGRADE
@@ -484,26 +491,45 @@ class TowerDefense:
 
             self.exp_system.stat_points -= cost
             self.exp_system.save_progress()
-        elif action == "downgrade":
-            vals = DOWNGRADE
-        else:
+
+            tower["damage_mult"] += vals["damage_mult"]
+            tower["damage_mult"] = max(1.0, tower["damage_mult"])
+            tower["range_mult"] += vals["range_mult"]
+            tower["range_mult"] = max(1.0, min(tower["range_mult"], 2.0))
+            tower["fire_rate_mult"] += vals["fire_rate_mult"]
+            tower["fire_rate_mult"] = max(0.75, min(tower["fire_rate_mult"], 1.0))
+            tower["projectile_speed_mult"] += vals["projectile_speed_mult"]
+            tower["projectile_speed_mult"] = max(1.0, min(tower["projectile_speed_mult"], 1.75))
+            tower["stored_points"] += vals["stored_points"]
+
+        if action == "downgrade":
+            self.reset_tower_upgrades(tower_name)
+            return
+
+        self.save_permanent_upgrades()
+
+    def reset_tower_upgrades(self, tower_name: str):
+        if tower_name not in self.permanent_upgrades:
             return
 
         tower = self.permanent_upgrades[tower_name]
 
-        tower["damage_mult"] += vals["damage_mult"]
-        tower["damage_mult"] = max(1.0, tower["damage_mult"])
+        # Refund stored points
+        refund = tower.get("stored_points", 0)
+        if refund > 0:
+            self.exp_system.stat_points += refund
 
-        tower["range_mult"] += vals["range_mult"]
-        tower["range_mult"] = max(1.0, min(tower["range_mult"], 2.0))
+        # Reset stats using your RESET values
+        tower["damage_mult"] = 1.0
+        tower["range_mult"] = 1.0
+        tower["fire_rate_mult"] = 1.0
+        tower["projectile_speed_mult"] = 1.0
+        tower["stored_points"] = 0
 
-        tower["fire_rate_mult"] += vals["fire_rate_mult"]
-        tower["fire_rate_mult"] = max(0.75, min(tower["fire_rate_mult"], 1.0))
-
-        tower["projectile_speed_mult"] += vals["projectile_speed_mult"]
-        tower["projectile_speed_mult"] = max(1.0, min(tower["projectile_speed_mult"], 1.75))
-
+        # Save changes
+        self.exp_system.save_progress()
         self.save_permanent_upgrades()
+
 
     def draw_tower_multipliers(self, surface, parent_ui, tower_name):
 
@@ -1071,19 +1097,13 @@ class TowerDefense:
                     self.running = False
 
                 elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_F11:
-                        self.fullscreen = not self.fullscreen
-                        if self.fullscreen:
-                            self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-                        else:
-                            self.screen = pygame.display.set_mode((window_w, window_h), pygame.RESIZABLE)
-                    
                     if self.game_over:
                         self.reset_game()
                         continue
                     
-                    if event.key == pygame.K_SPACE:
-                        self.wave_director.force_next_wave = True
+                    if self.inGame and not self.paused and not self.game_over:
+                        if event.key == pygame.K_SPACE:
+                            self.wave_director.force_next_wave = True
                     
                     if event.key == pygame.K_ESCAPE:
                         self.toggle_pause(self.hud_icons["pause_toggle"])

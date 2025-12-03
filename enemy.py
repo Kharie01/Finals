@@ -3,7 +3,7 @@ from settings import *
 ENEMY_TYPES = {
     "grunt":  {"size": (48, 48), "anim": None, "speed": 0.8, "hp": 60, "damage": 10, "flying": False},
     "fast":   {"size": (40, 40), "anim": None, "speed": 1.2, "hp": 40, "damage": 5,  "flying": False},
-    "tank":   {"size": (90, 90), "anim": None, "speed": 0.4, "hp": 500,"damage": 35, "flying": False},
+    "tank":   {"size": (75, 75), "anim": None, "speed": 0.6, "hp": 500,"damage": 35, "flying": False}, #75 max size for tank, will not register if more
     "flying": {"size": (60, 60), "anim": None, "speed": 1.0, "hp": 45, "damage": 10, "flying": True},
     "swarm":  {"size": (32, 32), "anim": None, "speed": 1.3, "hp": 5,  "damage": 5,  "flying": False},
 }

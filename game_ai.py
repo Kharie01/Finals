@@ -1,15 +1,7 @@
 import time
 import random
 from settings import *
-
-# Define enemy types with attributes
-ENEMY_TYPES = {
-    "grunt":   {"cost": 5,  "speed": 1.67,  "hp": 60},
-    "fast":    {"cost": 7,  "speed": 3.00, "hp": 40},
-    "tank":    {"cost": 20, "speed": 1.00,  "hp": 250},
-    "flying":  {"cost": 10, "speed": 2.43, "hp": 45, "flying": True},
-    "swarm":   {"cost": 3,  "speed": 1.95,  "hp": 20},
-}
+from enemy import ENEMY_TYPES
 
 # Predefined wave patterns
 WAVE_PATTERNS = {
@@ -120,7 +112,7 @@ class WaveDirector:
         self.GAME_HEIGHT = game_height
 
                 # --- WAVE ANNOUNCEMENT ---
-        self.wave_announce_duration = 2.5     # seconds
+        self.wave_announce_duration = 3     # seconds
         self.wave_announce_timer = 0
         self.wave_state = "idle"              # "idle", "announce"
         self.wave_header_surf = None
