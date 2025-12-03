@@ -718,7 +718,7 @@ class TowerDefense:
                 pygame.draw.rect(surface, BROWN, tower.delete_button, border_radius=6)
                 pygame.draw.rect(surface, DARK_BROWN, tower.delete_button, 2, border_radius=6)
 
-                delete_text = font.render("DELETE", True, TEXT_COLOR)
+                delete_text = font.render("SELL", True, TEXT_COLOR)
                 surface.blit(delete_text, (
                     tower.delete_button.centerx - delete_text.get_width() // 2,
                     tower.delete_button.centery - delete_text.get_height() // 2
@@ -1142,6 +1142,7 @@ class TowerDefense:
                         self.selected_tower = None
                         for tower in self.placed_towers:
                             if tower.delete_button and tower.delete_button.collidepoint(game_mouse):
+                                self.money_system.on_tower_Sell()
                                 self.all_sprites.remove(tower)
                                 self.placed_towers.remove(tower)
                                 break

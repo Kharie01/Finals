@@ -7,8 +7,6 @@ class Tower(pygame.sprite.Sprite):
                 money_system=None, tower_type=None,weapon_frames=None,sound_path=None, sfx_volume=1.0):
 
         super().__init__()
-        MAX_LEVEL = 3
-        hello = 2
         # --- Images ---
         self.idle_frames = [pygame.transform.scale(img, size) for img in idle_frames]
         self.building_frames = [pygame.transform.scale(img, size) for img in building_frames]
