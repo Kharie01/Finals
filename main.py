@@ -60,7 +60,16 @@ class TowerDefense:
 
         self.apply_saved_resolution()
         pygame.display.set_caption("Fortress Frontline")
-        pygame.display.set_icon(pygame.image.load(resource_path('assets/images/icon/gameicon.ico')).convert_alpha())
+        try:
+            pygame.display.set_icon(
+                pygame.image.load(resource_path('assets/images/icon/gameicon.ico')).convert_alpha()
+            )
+        except Exception:
+            icon = pygame.Surface((32, 32), pygame.SRCALPHA)
+            icon.fill((30, 30, 30))
+            pygame.draw.circle(icon, (255, 80, 80), (16, 16), 10)
+            pygame.display.set_icon(icon)
+
 
         # Custom mouse cursor
         mouse_cursor_img = pygame.image.load(resource_path('assets/images/mouse.png')).convert_alpha()
